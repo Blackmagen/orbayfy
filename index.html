@@ -155,7 +155,6 @@
     </div>
 
     <div id="player-bar" class="fixed bottom-0 left-0 right-0 glass px-6 py-5 transform translate-y-full transition-all duration-700">
-        
         <button onclick="togglePlayerSize()" class="absolute -top-4 right-6 bg-zinc-900 text-zinc-500 hover:text-white border border-zinc-800 w-8 h-8 flex items-center justify-center rounded-full shadow-lg z-50 transition">
             <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
         </button>
@@ -193,18 +192,29 @@
 
     <script>
         // === SUSTITUYE AQUI CON TUS CLAVES DE SUPABASE ===
-        const SU_URL = 'https://pgdouwffkptdraboycnz.supabase.co';
-        const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
-
+        const SU_URL = 'ESCRIBE_AQUI_TU_URL';
+        const SU_KEY = 'ESCRIBE_AQUI_TU_KEY';
         const client = window.supabase.createClient(SU_URL, SU_KEY);
         
         let user = null, activeListId = null, currentSongs = [], allUserSongs = [], selectedSongs = [], playingIndex = -1, playingSongId = null, ytPlayer, isPlaying = false, modoEdicion = false, queueImport = [], indexImport = 0, allLists = [];
+        
+        // Variables para el Hack de iOS
         let progressTimer;
         let isPlayerMinimized = false;
+        let lastTime = 0;
+        let lastTick = Date.now();
+        let isUserSeeking = false;
 
         let tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api";
         document.getElementsByTagName('script')[0].parentNode.insertBefore(tag, null);
-        function onYouTubeIframeAPIReady() { ytPlayer = new YT.Player('yt-player-container', { events: { 'onStateChange': onPlayerStateChange } }); }
+        
+        // Inicializamos YouTube ocultando sus controles por si acaso
+        function onYouTubeIframeAPIReady() { 
+            ytPlayer = new YT.Player('yt-player-container', { 
+                playerVars: { controls: 0, disablekb: 1, fs: 0, rel: 0 },
+                events: { 'onStateChange': onPlayerStateChange } 
+            }); 
+        }
 
         client.auth.onAuthStateChange((event, session) => {
             if (session) {
@@ -282,33 +292,21 @@
                 try {
                     const listId = val.split('list=')[1].split('&')[0];
                     let ids = [];
-
-                    const pipedServers = [
-                        'https://pipedapi.smnz.de',
-                        'https://pipedapi.tokhmi.xyz',
-                        'https://api.piped.projectsegfau.lt',
-                        'https://pipedapi.kavin.rocks'
-                    ];
+                    const pipedServers = ['https://pipedapi.smnz.de', 'https://pipedapi.tokhmi.xyz', 'https://api.piped.projectsegfau.lt', 'https://pipedapi.kavin.rocks'];
 
                     for (let server of pipedServers) {
                         if (ids.length > 0) break;
                         try {
                             const res = await fetch(`${server}/playlists/${listId}`);
-                            if(res.ok) {
-                                const data = await res.json();
-                                if(data.relatedStreams) ids = data.relatedStreams.map(v => v.url.split('?v=')[1]);
-                            }
-                        } catch(e) { console.log(`Fallo servidor: ${server}`); }
+                            if(res.ok) { const data = await res.json(); if(data.relatedStreams) ids = data.relatedStreams.map(v => v.url.split('?v=')[1]); }
+                        } catch(e) {}
                     }
 
                     if(ids.length === 0) {
                         try {
                             const res2 = await fetch(`https://yt.lemnoslife.com/playlistItems?part=snippet&maxResults=50&playlistId=${listId}`);
-                            if(res2.ok) {
-                                const data2 = await res2.json();
-                                if(data2.items) ids = data2.items.map(item => item.snippet?.resourceId?.videoId);
-                            }
-                        } catch(e) { console.log('Fallo servidor Lemnos'); }
+                            if(res2.ok) { const data2 = await res2.json(); if(data2.items) ids = data2.items.map(item => item.snippet?.resourceId?.videoId); }
+                        } catch(e) {}
                     }
 
                     if(ids.length === 0) {
@@ -317,32 +315,28 @@
                             const html = await res3.text();
                             const matches = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].map(m => m[1]);
                             ids = [...new Set(matches)];
-                        } catch(e) { console.log('Fallo proxy de emergencia'); }
+                        } catch(e) {}
                     }
                     
                     queueImport = [...new Set(ids)].filter(id => id && id.length === 11).slice(0, 50);
                     
                     if(queueImport.length > 0) {
                         indexImport = 0; input.value = ""; 
-                        document.getElementById('import-loader').classList.add('hidden');
-                        document.getElementById('normal-input').classList.add('hidden'); 
+                        document.getElementById('import-loader').classList.add('hidden'); document.getElementById('normal-input').classList.add('hidden'); 
                         abrirPasoImportacion();
                     } else {
-                        alert("Los servidores de lectura han fallado o la lista es Privada. Inténtalo en 5 minutos.");
+                        alert("Los servidores han fallado o la lista es Privada.");
                         document.getElementById('import-loader').classList.add('hidden');
                     }
                 } catch(e) { 
-                    alert("Error crítico procesando el enlace."); 
-                    document.getElementById('import-loader').classList.add('hidden');
+                    alert("Error crítico procesando el enlace."); document.getElementById('import-loader').classList.add('hidden');
                 }
             } else {
                 const id = val.includes('v=') ? val.split('v=')[1].split('&')[0] : (val.includes('be/') ? val.split('be/')[1].split('?')[0] : val);
                 let t = "Nueva Canción";
                 try { t = (await (await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`)).json()).title; } catch(e){}
                 await client.from('mis_canciones').insert([{ content_id: id, titulo_personalizado: t, lista_id: activeListId, user_email: user.email }]);
-                input.value = ""; 
-                document.getElementById('import-loader').classList.add('hidden'); 
-                document.getElementById('normal-input').classList.add('hidden');
+                input.value = ""; document.getElementById('import-loader').classList.add('hidden'); document.getElementById('normal-input').classList.add('hidden');
                 loadSongs();
             }
         }
@@ -398,7 +392,6 @@
             }
             const inps = document.querySelectorAll('.edit-name-input');
             for(let i of inps) await client.from('mis_canciones').update({ titulo_personalizado: i.value }).eq('id', i.dataset.id);
-            
             toggleModoEdicion(); loadLists(); 
         }
 
@@ -488,7 +481,7 @@
             }
         }
 
-        // --- REPRODUCTOR CON MEJORA PARA iOS MEDIA SESSION ---
+        // --- REPRODUCTOR CON HACK ANTI-iOS ---
         function playSong(i) {
             if(modoEdicion || i < 0 || i >= currentSongs.length) return; 
             playingIndex = i; 
@@ -503,34 +496,29 @@
             document.getElementById('player-bar').classList.remove('translate-y-full');
             document.getElementById('mini-player').classList.add('hidden');
             
-            ytPlayer.loadVideoById(s.content_id); setPlayState(true); renderSongs();
+            // Bloqueamos la detección de saltos falsos por 2 segundos mientras carga la canción
+            isUserSeeking = true; 
+            ytPlayer.loadVideoById(s.content_id); 
+            setPlayState(true); 
+            renderSongs();
+            setTimeout(() => { isUserSeeking = false; }, 2000);
             
-            // --- LA TRAMPA DEFINITIVA PARA iOS ---
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({ 
                     title: s.titulo_personalizado, 
                     artist: "Orbayfy Búnker", 
-                    album: document.getElementById('titulo-lista-activa').innerText,
+                    album: document.getElementById('titulo-lista-activa').innerText || "Mi Lista",
                     artwork: [
                         { src: `https://img.youtube.com/vi/${s.content_id}/mqdefault.jpg`, sizes: '320x180', type: 'image/jpeg' },
                         { src: `https://img.youtube.com/vi/${s.content_id}/maxresdefault.jpg`, sizes: '1280x720', type: 'image/jpeg' }
                     ] 
                 });
-                
-                // Controles normales
-                navigator.mediaSession.setActionHandler('play', () => ytPlayer.playVideo());
-                navigator.mediaSession.setActionHandler('pause', () => ytPlayer.pauseVideo());
-                navigator.mediaSession.setActionHandler('previoustrack', () => prevSong());
-                navigator.mediaSession.setActionHandler('nexttrack', () => nextSong());
-                
-                // SECUESTRO DE LOS BOTONES DE 15 SEGUNDOS DE iOS
-                navigator.mediaSession.setActionHandler('seekforward', () => nextSong());
-                navigator.mediaSession.setActionHandler('seekbackward', () => prevSong());
             }
         }
 
         function togglePlay() { isPlaying ? ytPlayer.pauseVideo() : ytPlayer.playVideo(); }
 
+        // AQUÍ VIVE LA TRAMPA DEL TIEMPO
         function setPlayState(p) { 
             isPlaying = p; 
             document.getElementById('icon-play').classList.toggle('hidden', p); 
@@ -542,10 +530,31 @@
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = p ? "playing" : "paused"; 
             
             if(p) {
+                lastTime = ytPlayer.getCurrentTime() || 0;
+                lastTick = Date.now();
                 progressTimer = setInterval(() => {
                     if(ytPlayer && ytPlayer.getCurrentTime && ytPlayer.getDuration) {
+                        const currentTime = ytPlayer.getCurrentTime();
+                        const now = Date.now();
+                        const playerDiff = currentTime - lastTime;
+                        const realTimeElapsed = (now - lastTick) / 1000;
+                        
+                        // HACK: Si el reproductor salta entre 6 y 20 segundos de golpe (lo que hace iOS)...
+                        if (Math.abs(playerDiff) > 6 && Math.abs(playerDiff) < 20 && !isUserSeeking) {
+                            // ...Y ese salto no coincide con el tiempo de la vida real (evitamos falsos positivos)
+                            if (Math.abs(playerDiff - realTimeElapsed) > 4) {
+                                console.log("¡Trampa Activada! iOS ha intentado avanzar/retroceder. Pasando canción...");
+                                if (playerDiff > 0) nextSong();
+                                else prevSong();
+                                return; // Cortamos el bucle
+                            }
+                        }
+                        
+                        lastTime = currentTime;
+                        lastTick = now;
+
                         const dur = ytPlayer.getDuration();
-                        if(dur > 0) document.getElementById('progress-bar').style.width = ((ytPlayer.getCurrentTime() / dur) * 100) + '%';
+                        if(dur > 0) document.getElementById('progress-bar').style.width = ((currentTime / dur) * 100) + '%';
                     }
                 }, 500);
             } else {
@@ -555,10 +564,15 @@
 
         function seekSong(e) {
             if(!ytPlayer || !ytPlayer.getDuration) return;
+            isUserSeeking = true; // Avisamos de que somos NOSOTROS los que avanzamos, no iOS
             const rect = e.currentTarget.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             const percent = Math.max(0, Math.min(1, clickX / rect.width));
-            ytPlayer.seekTo(ytPlayer.getDuration() * percent, true);
+            const newTime = ytPlayer.getDuration() * percent;
+            ytPlayer.seekTo(newTime, true);
+            lastTime = newTime;
+            lastTick = Date.now();
+            setTimeout(() => { isUserSeeking = false; }, 1000); // Volvemos a activar la trampa
         }
 
         function nextSong() { 
