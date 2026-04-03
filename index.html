@@ -193,8 +193,8 @@
 
     <script>
         // === SUSTITUYE AQUI CON TUS CLAVES DE SUPABASE ===
-       const SU_URL = 'https://pgdouwffkptdraboycnz.supabase.co';
-    const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
+        const SU_URL = 'ESCRIBE_AQUI_TU_URL';
+        const SU_KEY = 'ESCRIBE_AQUI_TU_KEY';
         const client = window.supabase.createClient(SU_URL, SU_KEY);
         
         let user = null, activeListId = null, currentSongs = [], allUserSongs = [], selectedSongs = [], playingIndex = -1, playingSongId = null, ytPlayer, isPlaying = false, modoEdicion = false, queueImport = [], indexImport = 0, allLists = [];
@@ -254,11 +254,10 @@
             document.getElementById('area-canciones').classList.remove('hidden'); 
             document.getElementById('titulo-lista-activa').innerText = name; 
             document.getElementById('input-edit-lista').value = name;
-            document.getElementById('search-song').value = ""; // Limpiar buscador
+            document.getElementById('search-song').value = ""; 
             actualizarInterfazModo(); loadLists(); loadSongs(); 
         }
 
-        // --- BORRADO CON MODAL INTEGRADO ---
         async function ejecutarBorrarLista() {
             cerrarModal('delete-list-modal');
             await client.from('mis_listas').delete().eq('id', activeListId);
@@ -267,7 +266,6 @@
             loadLists(); 
         }
 
-        // --- UI BOTÓN AÑADIR ---
         function toggleAddInput() {
             const el = document.getElementById('normal-input');
             el.classList.toggle('hidden');
@@ -412,7 +410,6 @@
 
         async function ejecutarMovimiento(nuevaId) { for(let id of selectedSongs) await client.from('mis_canciones').update({ lista_id: nuevaId }).eq('id', id); cerrarModal('move-modal'); toggleModoEdicion(); }
 
-        // --- BORRADO DE CANCIONES CON MODAL INTEGRADO ---
         function confirmarBorrarSeleccion() {
             if(selectedSongs.length === 0) return;
             document.getElementById('delete-songs-text').innerText = `¿Quieres borrar las ${selectedSongs.length} canciones seleccionadas?`;
@@ -427,27 +424,22 @@
 
         // --- MOTOR DE BÚSQUEDA GLOBAL ---
         async function loadSongs() {
-            // Descargamos TODAS las canciones del usuario en memoria
             const { data } = await client.from('mis_canciones').select('*').order('created_at', {ascending: false});
             allUserSongs = data || [];
             renderSongs();
         }
 
-        function filterSongs(val) {
-            renderSongs(); // Volvemos a dibujar basándonos en el texto
-        }
+        function filterSongs(val) { renderSongs(); }
 
         function renderSongs() {
             const searchVal = document.getElementById('search-song').value.trim().toLowerCase();
             const btnGestionar = document.getElementById('btn-gestionar');
             
             if (searchVal !== "") {
-                // Modo Búsqueda Global (Busca en TODAS las listas)
                 currentSongs = allUserSongs.filter(c => c.titulo_personalizado.toLowerCase().includes(searchVal));
                 document.getElementById('titulo-lista-activa').innerText = "Resultados Globales";
-                btnGestionar.classList.add('hidden'); // Ocultar gestión mientras buscas
+                btnGestionar.classList.add('hidden'); 
             } else {
-                // Modo Lista Normal
                 currentSongs = allUserSongs.filter(c => c.lista_id === activeListId);
                 const activeList = allLists.find(l => l.id === activeListId);
                 if(activeList) {
@@ -459,8 +451,6 @@
 
             document.getElementById('contenedor-canciones').innerHTML = currentSongs.map((c, i) => {
                 const isSelected = selectedSongs.includes(c.id);
-                
-                // Si estamos en búsqueda global, sacamos el nombre de la lista a la que pertenece
                 let badgeLista = "";
                 if(searchVal !== "") {
                     const listData = allLists.find(l => l.id === c.lista_id);
@@ -486,7 +476,6 @@
             }).join('');
         }
 
-        // --- SISTEMA MINIMIZAR REPRODUCTOR ---
         function togglePlayerSize() {
             isPlayerMinimized = !isPlayerMinimized;
             if(isPlayerMinimized) {
@@ -498,28 +487,40 @@
             }
         }
 
-        // --- REPRODUCTOR Y BARRA MINIMALISTA ---
+        // --- REPRODUCTOR CON MEJORA PARA iOS MEDIA SESSION ---
         function playSong(i) {
             if(modoEdicion || i < 0 || i >= currentSongs.length) return; 
             playingIndex = i; 
             const s = currentSongs[i];
-            playingSongId = s.id; // Guardamos la ID para que el dorado no se pierda al buscar
+            playingSongId = s.id; 
             
-            // Actualizar datos del reproductor
             document.getElementById('player-title').innerText = s.titulo_personalizado;
             document.getElementById('player-cover').src = `https://img.youtube.com/vi/${s.content_id}/mqdefault.jpg`;
             document.getElementById('mini-player-cover').src = `https://img.youtube.com/vi/${s.content_id}/mqdefault.jpg`;
             
-            // Forzar maximizar al cambiar de canción
             isPlayerMinimized = false;
             document.getElementById('player-bar').classList.remove('translate-y-full');
             document.getElementById('mini-player').classList.add('hidden');
             
             ytPlayer.loadVideoById(s.content_id); setPlayState(true); renderSongs();
             
+            // --- ENGAÑAMOS A iOS AQUÍ ---
             if ('mediaSession' in navigator) {
-                navigator.mediaSession.metadata = new MediaMetadata({ title: s.titulo_personalizado, artwork: [{ src: `https://img.youtube.com/vi/${s.content_id}/maxresdefault.jpg`, type: 'image/jpeg' }] });
-                navigator.mediaSession.setActionHandler('previoustrack', prevSong); navigator.mediaSession.setActionHandler('nexttrack', nextSong);
+                navigator.mediaSession.metadata = new MediaMetadata({ 
+                    title: s.titulo_personalizado, 
+                    artist: "Orbayfy Búnker", // Fuerza a iOS a pensar que es música
+                    album: document.getElementById('titulo-lista-activa').innerText,
+                    artwork: [
+                        { src: `https://img.youtube.com/vi/${s.content_id}/mqdefault.jpg`, sizes: '320x180', type: 'image/jpeg' },
+                        { src: `https://img.youtube.com/vi/${s.content_id}/maxresdefault.jpg`, sizes: '1280x720', type: 'image/jpeg' }
+                    ] 
+                });
+                
+                // Declaramos todos los controles explícitamente
+                navigator.mediaSession.setActionHandler('play', () => ytPlayer.playVideo());
+                navigator.mediaSession.setActionHandler('pause', () => ytPlayer.pauseVideo());
+                navigator.mediaSession.setActionHandler('previoustrack', () => prevSong());
+                navigator.mediaSession.setActionHandler('nexttrack', () => nextSong());
             }
         }
 
@@ -530,7 +531,6 @@
             document.getElementById('icon-play').classList.toggle('hidden', p); 
             document.getElementById('icon-pause').classList.toggle('hidden', !p); 
             
-            // Efecto de disco girando en la burbuja
             if(p) document.getElementById('mini-player-cover').classList.add('spin-slow');
             else document.getElementById('mini-player-cover').classList.remove('spin-slow');
             
@@ -556,7 +556,6 @@
             ytPlayer.seekTo(ytPlayer.getDuration() * percent, true);
         }
 
-        // Para que Next y Prev funcionen perfecto aunque busques algo nuevo
         function nextSong() { 
             let idx = currentSongs.findIndex(c => c.id === playingSongId);
             if(idx !== -1) playingIndex = idx;
