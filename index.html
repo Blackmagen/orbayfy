@@ -12,7 +12,7 @@
         .azul-premium { background: linear-gradient(135deg, #001d3d 0%, #003566 100%); }
         .oro-premium { color: #ffc300; }
         .bg-oro { background-color: #ffc300; }
-        .glass { background: rgba(0, 29, 61, 0.98); backdrop-filter: blur(40px); border-top: 2px solid rgba(255, 195, 0, 0.2); z-index: 9999; }
+        .glass { background: rgba(0, 29, 61, 0.98); backdrop-filter: blur(40px); z-index: 9999; }
         .modal-bg { background: rgba(0, 8, 20, 0.98); backdrop-filter: blur(20px); z-index: 10000; }
         .hidden-engine { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
         
@@ -113,8 +113,14 @@
         </div>
     </div>
 
-    <div id="player-bar" class="fixed bottom-0 left-0 right-0 glass px-6 py-8 transform translate-y-full transition-all duration-700">
-        <div class="max-w-2xl mx-auto flex items-center justify-between gap-6">
+    <div id="player-bar" class="fixed bottom-0 left-0 right-0 glass pt-2 px-6 pb-8 transform translate-y-full transition-all duration-700">
+        <div id="progress-container" class="absolute top-0 left-0 right-0 h-1.5 bg-zinc-800 cursor-pointer" onclick="seekSong(event)">
+            <div id="progress-bar" class="h-full bg-yellow-500 w-0 relative pointer-events-none">
+                <div class="absolute -right-1.5 top-1/2 transform -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow pointer-events-none"></div>
+            </div>
+        </div>
+
+        <div class="max-w-2xl mx-auto flex items-center justify-between gap-6 mt-6">
             <div class="flex items-center gap-4 w-1/3 truncate text-white">
                 <img id="player-cover" src="" class="w-16 h-16 rounded-2xl object-cover shadow-2xl">
                 <div class="truncate">
@@ -134,19 +140,17 @@
     <div id="yt-player-container" class="hidden-engine"></div>
 
     <script>
-        // === SUSTITUYE AQUI CON TUS CLAVES DE SUPABASE ===
-       const SU_URL = 'https://pgdouwffkptdraboycnz.supabase.co';
-       const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
+        const SU_URL = 'https://pgdouwffkptdraboycnz.supabase.co';
+        const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
         const client = window.supabase.createClient(SU_URL, SU_KEY);
         
         let user = null, activeListId = null, currentSongs = [], selectedSongs = [], playingIndex = -1, ytPlayer, isPlaying = false, modoEdicion = false, queueImport = [], indexImport = 0, allLists = [];
+        let progressTimer;
 
-        // Inicializar YouTube API
         let tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api";
         document.getElementsByTagName('script')[0].parentNode.insertBefore(tag, null);
         function onYouTubeIframeAPIReady() { ytPlayer = new YT.Player('yt-player-container', { events: { 'onStateChange': onPlayerStateChange } }); }
 
-        // --- SESIÓN PERSISTENTE (Soluciona el problema de login) ---
         client.auth.onAuthStateChange((event, session) => {
             if (session) {
                 user = session.user;
@@ -166,11 +170,7 @@
             if(error) document.getElementById('msg').innerText = "ERROR DE ACCESO"; 
         }
 
-        async function cerrarSesion() { 
-            await client.auth.signOut(); 
-            location.reload(); 
-        }
-
+        async function cerrarSesion() { await client.auth.signOut(); location.reload(); }
         function abrirModal(id) { document.getElementById(id).classList.remove('hidden'); }
         function cerrarModal(id) { document.getElementById(id).classList.add('hidden'); }
 
@@ -208,10 +208,10 @@
             await client.from('mis_listas').delete().eq('id', activeListId);
             activeListId = null; 
             document.getElementById('area-canciones').classList.add('hidden');
-            loadLists(); // Ahora no te saca de la sesión
+            loadLists(); 
         }
 
-        // --- MOTOR DE IMPORTACIÓN PLAYLIST (PUENTE EN CRUDO) ---
+        // --- MOTOR DE IMPORTACIÓN PLAYLIST (DOBLE PUENTE) ---
         async function smartAdd() {
             const input = document.getElementById('stream-input'), val = input.value.trim(); if(!val) return;
             document.getElementById('import-loader').classList.remove('hidden');
@@ -219,20 +219,35 @@
             if(val.includes('list=')) {
                 try {
                     const listId = val.split('list=')[1].split('&')[0];
-                    // Usamos allorigins/raw que devuelve el HTML puro sin ser detectado tan fácil
-                    const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://www.youtube.com/playlist?list='+listId)}`);
-                    const html = await res.text();
+                    let html = '';
                     
-                    // Expresión regular universal para sacar los IDs
-                    const ids = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].map(m => m[1]);
-                    queueImport = [...new Set(ids)].slice(0, 50); // Límite de 50 para no saturar
+                    // Intento 1: API AllOrigins (Formato JSON para evitar bloqueos puros)
+                    try {
+                        const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://www.youtube.com/playlist?list='+listId)}`);
+                        const data = await res.json();
+                        html = data.contents || '';
+                    } catch(e) { console.log('Fallo puente 1'); }
+
+                    // Intento 2: CodeTabs si el primero falla o no devuelve datos útiles
+                    if(!html || !html.includes('videoId')) {
+                        try {
+                            const res2 = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent('https://www.youtube.com/playlist?list='+listId)}`);
+                            html = await res2.text();
+                        } catch(e) { console.log('Fallo puente 2'); }
+                    }
+
+                    // Extraer IDs con 2 reglas distintas para blindar el sistema
+                    const ids1 = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].map(m => m[1]);
+                    const ids2 = [...html.matchAll(/watch\?v=([a-zA-Z0-9_-]{11})/g)].map(m => m[1]);
+                    
+                    queueImport = [...new Set([...ids1, ...ids2])].filter(id => id.length === 11).slice(0, 50);
                     
                     if(queueImport.length > 0) {
                         indexImport = 0; input.value = ""; 
                         document.getElementById('import-loader').classList.add('hidden');
                         abrirPasoImportacion();
                     } else {
-                        alert("No se pudo leer la lista. Asegúrate de que sea Pública o No Listada.");
+                        alert("No se pudo leer la lista. Puede que YouTube la esté bloqueando temporalmente o sea privada.");
                         document.getElementById('import-loader').classList.add('hidden');
                     }
                 } catch(e) { 
@@ -271,7 +286,7 @@
         function skipImport() { indexImport++; abrirPasoImportacion(); }
         function cancelarImportacion() { queueImport = []; cerrarModal('import-modal'); loadSongs(); }
 
-        // --- GESTIÓN MAESTRO (INCLUYE EDITAR NOMBRE DE LISTA) ---
+        // --- GESTIÓN MAESTRO ---
         function toggleModoEdicion() { modoEdicion = !modoEdicion; selectedSongs = []; actualizarInterfazModo(); loadSongs(); }
         
         function actualizarInterfazModo() {
@@ -293,21 +308,15 @@
         function toggleSelect(id) { if(!modoEdicion) return; const idx = selectedSongs.indexOf(id); if(idx > -1) selectedSongs.splice(idx, 1); else selectedSongs.push(id); loadSongs(); document.getElementById('count-selected').innerText = `${selectedSongs.length} Seleccionadas`; }
 
         async function guardarCambiosEdicion() {
-            // Guardar nombre de la lista
             const nuevoNombre = document.getElementById('input-edit-lista').value.trim();
             if(nuevoNombre && nuevoNombre !== document.getElementById('titulo-lista-activa').innerText) {
                 await client.from('mis_listas').update({ nombre: nuevoNombre }).eq('id', activeListId);
                 document.getElementById('titulo-lista-activa').innerText = nuevoNombre;
             }
-
-            // Guardar nombres de las canciones
             const inps = document.querySelectorAll('.edit-name-input');
-            for(let i of inps) {
-                await client.from('mis_canciones').update({ titulo_personalizado: i.value }).eq('id', i.dataset.id);
-            }
+            for(let i of inps) await client.from('mis_canciones').update({ titulo_personalizado: i.value }).eq('id', i.dataset.id);
             
-            toggleModoEdicion();
-            loadLists(); // Para actualizar el botón de arriba
+            toggleModoEdicion(); loadLists(); 
         }
 
         function abrirModalMover() {
@@ -346,13 +355,13 @@
             }).join('');
         }
 
-        // --- REPRODUCTOR ---
+        // --- REPRODUCTOR Y BARRA DE PROGRESO ---
         function playSong(i) {
             if(modoEdicion || i < 0 || i >= currentSongs.length) return; 
             playingIndex = i; const s = currentSongs[i];
             document.getElementById('player-title').innerText = s.titulo_personalizado;
             document.getElementById('player-cover').src = `https://img.youtube.com/vi/${s.content_id}/mqdefault.jpg`;
-            document.getElementById('player-bar').classList.remove('translate-y-full'); // Levanta el reproductor
+            document.getElementById('player-bar').classList.remove('translate-y-full'); 
             ytPlayer.loadVideoById(s.content_id); setPlayState(true); loadSongs();
             
             if ('mediaSession' in navigator) {
@@ -360,8 +369,36 @@
                 navigator.mediaSession.setActionHandler('previoustrack', prevSong); navigator.mediaSession.setActionHandler('nexttrack', nextSong);
             }
         }
+
         function togglePlay() { isPlaying ? ytPlayer.pauseVideo() : ytPlayer.playVideo(); }
-        function setPlayState(p) { isPlaying = p; document.getElementById('icon-play').classList.toggle('hidden', p); document.getElementById('icon-pause').classList.toggle('hidden', !p); if ('mediaSession' in navigator) navigator.mediaSession.playbackState = p ? "playing" : "paused"; }
+
+        function setPlayState(p) { 
+            isPlaying = p; 
+            document.getElementById('icon-play').classList.toggle('hidden', p); 
+            document.getElementById('icon-pause').classList.toggle('hidden', !p); 
+            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = p ? "playing" : "paused"; 
+            
+            // Actualizar la barra de tiempo
+            if(p) {
+                progressTimer = setInterval(() => {
+                    if(ytPlayer && ytPlayer.getCurrentTime && ytPlayer.getDuration) {
+                        const dur = ytPlayer.getDuration();
+                        if(dur > 0) document.getElementById('progress-bar').style.width = ((ytPlayer.getCurrentTime() / dur) * 100) + '%';
+                    }
+                }, 500);
+            } else {
+                clearInterval(progressTimer);
+            }
+        }
+
+        function seekSong(e) {
+            if(!ytPlayer || !ytPlayer.getDuration) return;
+            const rect = document.getElementById('progress-container').getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const percent = clickX / rect.width;
+            ytPlayer.seekTo(ytPlayer.getDuration() * percent, true);
+        }
+
         function nextSong() { playSong(playingIndex + 1); }
         function prevSong() { playSong(playingIndex - 1); }
         function setVolume(v) { ytPlayer.setVolume(v); }
