@@ -3,107 +3,313 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamVault Test</title>
+    <title>Orbayfy - Acceso Especial</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { background-color: #09090b; color: white; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { background-color: #000814; color: #e0e0e0; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .azul-premium { background: linear-gradient(135deg, #001d3d 0%, #003566 100%); }
+        .oro-premium { color: #ffc300; }
+        .bg-oro { background-color: #ffc300; }
+        .glass { background: rgba(0, 29, 61, 0.95); backdrop-filter: blur(40px); border-top: 2px solid rgba(255, 195, 0, 0.1); z-index: 100; }
+        .modal-bg { background: rgba(0, 8, 20, 0.98); backdrop-filter: blur(20px); }
         .hidden-engine { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+        
+        /* Checkbox y Estilos de Gestión */
+        .checkbox-custom { width: 22px; height: 22px; border: 2px solid #ffc300; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .checkbox-custom.checked { background: #ffc300; }
+        .checkbox-custom.checked::after { content: '✓'; color: #000; font-weight: 900; }
+        
+        input[type=range] { -webkit-appearance: none; background: rgba(255, 255, 255, 0.1); height: 4px; border-radius: 2px; cursor: pointer; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #ffc300; }
+        .active-list-btn { background: #ffc300 !important; color: #000814 !important; transform: scale(1.05); font-weight: 900; border: none !important; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="p-6 max-w-md mx-auto">
+<body class="pb-44">
 
-    <h1 class="text-2xl font-bold mb-6 text-indigo-500">StreamVault Demo</h1>
-
-    <div id="login-section" class="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
-        <h2 class="text-lg mb-4">Acceso Seguro</h2>
-        <input type="email" id="email" placeholder="Tu Email" class="w-full bg-black p-3 rounded mb-3 border border-zinc-700">
-        <input type="password" id="pass" placeholder="Contraseña" class="w-full bg-black p-3 rounded mb-4 border border-zinc-700">
-        <button onclick="registrar()" class="bg-zinc-700 px-4 py-2 rounded mr-2 text-sm">Registrarme</button>
-        <button onclick="entrar()" class="bg-indigo-600 px-4 py-2 rounded text-sm">Entrar</button>
-        <p id="msg" class="text-xs text-orange-400 mt-3"></p>
-    </div>
-
-    <div id="app-section" class="hidden">
-        <p id="user-info" class="text-xs text-zinc-500 mb-4"></p>
-        
-        <div class="flex gap-2 mb-6">
-            <input type="text" id="stream-id" placeholder="Pega el ID aquí..." class="flex-1 bg-zinc-900 p-3 rounded border border-zinc-800">
-            <button onclick="addStream()" class="bg-indigo-600 px-4 rounded font-bold">+</button>
+    <div id="login-section" class="fixed inset-0 z-[300] bg-[#000814] flex items-center justify-center p-6">
+        <div class="w-full max-w-sm p-10 rounded-[3rem] border border-zinc-800 azul-premium text-center shadow-2xl">
+            <h1 class="text-5xl font-black mb-2 italic tracking-tighter text-white">ORBAYFY<span class="oro-premium">.</span></h1>
+            <p class="text-zinc-400 text-[10px] mb-10 uppercase tracking-[0.3em] font-bold">Acceso Especial</p>
+            <input type="email" id="email" placeholder="Email" class="w-full bg-[#000814] p-5 rounded-2xl mb-3 outline-none border border-zinc-800 focus:border-yellow-500 text-white">
+            <input type="password" id="pass" placeholder="Contraseña" class="w-full bg-[#000814] p-5 rounded-2xl mb-8 outline-none border border-zinc-800 focus:border-yellow-500 text-white">
+            <button onclick="entrar()" class="w-full bg-oro text-black font-black py-5 rounded-2xl hover:brightness-110 transition-all">ENTRAR</button>
+            <p id="msg" class="text-xs text-yellow-200 mt-4 font-bold h-4"></p>
         </div>
-
-        <div id="lista-streams" class="space-y-2"></div>
-
-        <button onclick="stopStream()" class="mt-8 w-full bg-red-900/50 text-red-400 p-3 rounded text-sm hidden" id="btn-stop">
-            Detener Audio
-        </button>
     </div>
 
-    <div id="player" class="hidden-engine"></div>
+    <div id="import-modal" class="hidden fixed inset-0 z-[450] modal-bg flex items-center justify-center p-6">
+        <div class="w-full max-w-sm azul-premium p-8 rounded-[2.5rem] border border-yellow-500/30 shadow-2xl text-center">
+            <p id="import-count" class="text-[10px] text-yellow-500 mb-4 uppercase tracking-widest font-bold">Analizando lista...</p>
+            <img id="import-preview" src="" class="w-full aspect-video rounded-3xl object-cover mb-4 border border-zinc-800 shadow-xl bg-black">
+            <p id="import-title" class="font-bold text-sm truncate px-2 mb-8 text-white">Cargando...</p>
+            <div class="flex gap-3">
+                <button onclick="skipImport()" class="w-1/3 py-4 text-zinc-500 font-bold uppercase text-xs">SALTAR</button>
+                <button onclick="confirmImport()" class="w-2/3 bg-white text-black py-4 rounded-2xl font-black uppercase text-xs shadow-lg">AÑADIR</button>
+            </div>
+            <button onclick="cancelarImportacion()" class="mt-6 text-[10px] text-zinc-600 uppercase font-bold hover:text-white transition">Detener Importación</button>
+        </div>
+    </div>
+
+    <div id="move-modal" class="hidden fixed inset-0 z-[500] modal-bg flex items-center justify-center p-6 text-white text-center">
+        <div class="w-full max-w-sm azul-premium p-8 rounded-[2.5rem] border border-yellow-500/30 shadow-2xl">
+            <h3 class="text-xl font-black mb-6 italic">Mover Selección a...</h3>
+            <div id="lista-destinos-mover" class="space-y-2 mb-8 max-h-60 overflow-y-auto no-scrollbar"></div>
+            <button onclick="cerrarModal('move-modal')" class="text-xs text-zinc-500 font-bold uppercase">Cerrar</button>
+        </div>
+    </div>
+
+    <div id="app-section" class="hidden max-w-2xl mx-auto p-6 pt-10">
+        <header class="flex justify-between items-center mb-10">
+            <h1 class="text-2xl font-black italic tracking-tighter uppercase oro-premium">ORBAYFY</h1>
+            <div class="flex gap-2">
+                <button onclick="abrirModal('list-modal')" class="bg-[#001d3d] px-5 py-2.5 rounded-xl text-[10px] font-black border border-yellow-500/20 text-white hover:border-yellow-500 transition">+ LISTA</button>
+                <button onclick="cerrarSesion()" class="bg-red-900/20 px-5 py-2.5 rounded-xl text-[10px] font-black border border-red-500/20 text-red-500">SALIR</button>
+            </div>
+        </header>
+
+        <div id="contenedor-listas" class="flex gap-3 overflow-x-auto pb-6 no-scrollbar mb-8"></div>
+
+        <section id="area-canciones" class="hidden">
+            <div class="flex items-center justify-between mb-8">
+                <div class="flex flex-col">
+                    <h3 id="titulo-lista-activa" class="text-3xl font-black tracking-tight text-white">---</h3>
+                    <button onclick="toggleModoEdicion()" id="btn-gestionar" class="text-[10px] oro-premium font-black uppercase tracking-widest border border-yellow-500/30 px-4 py-1.5 rounded-full bg-yellow-500/5 mt-2">Gestionar Lista</button>
+                </div>
+                <button onclick="confirmarBorrarLista()" class="text-[10px] text-zinc-600 font-black uppercase hover:text-red-500 transition">Borrar Lista</button>
+            </div>
+
+            <div id="panel-maestro" class="hidden mb-8 p-6 azul-premium rounded-[2.5rem] border border-yellow-500/20 shadow-2xl">
+                <p id="count-selected" class="text-[10px] font-black text-white uppercase mb-4 tracking-widest">0 Seleccionadas</p>
+                <div class="flex gap-2">
+                    <button onclick="abrirModalMover()" class="flex-1 bg-indigo-600 py-3 rounded-xl text-[10px] font-black text-white uppercase">Mover</button>
+                    <button onclick="borrarSeleccion()" class="flex-1 bg-red-600 py-3 rounded-xl text-[10px] font-black text-white uppercase">Borrar</button>
+                    <button onclick="guardarCambiosNombres()" class="flex-1 bg-white text-black py-3 rounded-xl text-[10px] font-black uppercase">Guardar</button>
+                </div>
+            </div>
+
+            <div id="normal-input" class="relative mb-8">
+                <input type="text" id="stream-input" placeholder="Vídeo o Playlist de YouTube..." class="w-full bg-[#001d3d]/50 p-6 rounded-[2rem] border border-zinc-800 outline-none focus:ring-2 focus:ring-yellow-500 transition text-sm text-white pr-20">
+                <button onclick="smartAdd()" class="absolute right-3 top-3 bottom-3 bg-oro text-black px-8 rounded-2xl font-black text-2xl shadow-lg active:scale-90">+</button>
+                <div id="import-loader" class="hidden absolute right-24 top-1/2 -translate-y-1/2"><div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div></div>
+            </div>
+
+            <div id="contenedor-canciones" class="space-y-3"></div>
+        </section>
+    </div>
+
+    <div id="list-modal" class="hidden fixed inset-0 z-[400] modal-bg flex items-center justify-center p-6">
+        <div class="w-full max-w-sm azul-premium p-8 rounded-[2.5rem] border border-yellow-500/30 text-center">
+            <h3 class="text-xl font-black mb-6 italic text-white">Nueva Lista</h3>
+            <input type="text" id="list-name-input" placeholder="Nombre..." class="w-full bg-black p-5 rounded-2xl border border-zinc-800 outline-none mb-8 text-white">
+            <div class="flex gap-3">
+                <button onclick="cerrarModal('list-modal')" class="w-1/2 py-4 text-zinc-500 font-bold uppercase text-xs">Cancelar</button>
+                <button onclick="guardarLista()" class="w-1/2 bg-oro text-black py-4 rounded-2xl font-black uppercase text-xs">Crear</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="player-bar" class="fixed bottom-0 left-0 right-0 glass px-6 py-8 transform translate-y-full transition-all duration-700">
+        <div class="max-w-2xl mx-auto flex items-center justify-between gap-6">
+            <div class="flex items-center gap-4 w-1/3 truncate text-white">
+                <img id="player-cover" src="" class="w-16 h-16 rounded-2xl object-cover shadow-2xl">
+                <div class="truncate">
+                    <p id="player-title" class="font-black text-sm truncate pr-4 text-white">---</p>
+                    <p class="text-[9px] oro-premium font-bold uppercase tracking-widest italic">Acceso Especial</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-8">
+                <button onclick="prevSong()" class="text-zinc-500 hover:text-white transition"><svg width="32" height="32" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+                <button onclick="togglePlay()" id="btn-play-pause" class="w-16 h-16 bg-oro text-black rounded-full flex items-center justify-center hover:scale-105 transition shadow-2xl"><svg id="icon-play" width="36" height="36" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><svg id="icon-pause" class="hidden" width="36" height="36" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
+                <button onclick="nextSong()" class="text-zinc-500 hover:text-white transition"><svg width="32" height="32" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+            </div>
+            <div class="hidden sm:flex items-center gap-3 w-1/3 justify-end"><input type="range" id="volume-bar" value="100" min="0" max="100" class="w-20" oninput="setVolume(this.value)"></div>
+        </div>
+    </div>
+
+    <div id="yt-player-container" class="hidden-engine"></div>
 
     <script>
-        // ⚠️ PEGA AQUÍ TUS DATOS DE SUPABASE (entre las comillas simples) ⚠️
         const SU_URL = 'https://pgdouwffkptdraboycnz.supabase.co';
-        const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
+const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
+        const client = window.supabase.createClient(SU_URL, SU_KEY);
         
-        // EL ARREGLO ESTÁ AQUÍ (clienteDB en lugar de supabase)
-        const clienteDB = window.supabase.createClient(SU_URL, SU_KEY);
-        let currentUser = null;
+        let user = null, activeListId = null, currentSongs = [], selectedSongs = [], playingIndex = -1, ytPlayer, isPlaying = false, modoEdicion = false, queueImport = [], indexImport = 0, allLists = [];
 
-        async function registrar() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('pass').value;
-            const { error } = await clienteDB.auth.signUp({ email, password });
-            if(error) document.getElementById('msg').innerText = error.message;
-            else document.getElementById('msg').innerText = "¡Registro exitoso! Dale a Entrar.";
-        }
+        let tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api";
+        document.getElementsByTagName('script')[0].parentNode.insertBefore(tag, null);
+        function onYouTubeIframeAPIReady() { ytPlayer = new YT.Player('yt-player-container', { events: { 'onStateChange': onPlayerStateChange } }); }
 
         async function entrar() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('pass').value;
-            const { data, error } = await clienteDB.auth.signInWithPassword({ email, password });
-            if(error) document.getElementById('msg').innerText = error.message;
-            else { currentUser = data.user; mostrarApp(); }
+            const e = document.getElementById('email').value, p = document.getElementById('pass').value;
+            const { data, error } = await client.auth.signInWithPassword({ email: e, password: p });
+            if(!error) { user = data.user; document.getElementById('login-section').classList.add('hidden'); document.getElementById('app-section').classList.remove('hidden'); loadLists(); }
+            else { document.getElementById('msg').innerText = "ERROR DE ACCESO"; }
+        }
+        function cerrarSesion() { client.auth.signOut(); location.reload(); }
+
+        function abrirModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function cerrarModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        // --- GESTIÓN LISTAS ---
+        async function guardarLista() {
+            const n = document.getElementById('list-name-input').value; if(!n) return;
+            await client.from('mis_listas').insert([{ nombre: n, user_email: user.email }]);
+            document.getElementById('list-name-input').value = ""; cerrarModal('list-modal'); loadLists();
         }
 
-        function mostrarApp() {
-            document.getElementById('login-section').classList.add('hidden');
-            document.getElementById('app-section').classList.remove('hidden');
-            document.getElementById('user-info').innerText = "Usuario: " + currentUser.email;
-            cargarLista();
+        async function loadLists() {
+            const { data } = await client.from('mis_listas').select('*').order('created_at', {ascending: false});
+            allLists = data || [];
+            document.getElementById('contenedor-listas').innerHTML = allLists.map(l => `
+                <button onclick="selectList('${l.id}', '${l.nombre}')" class="px-8 py-4 rounded-3xl whitespace-nowrap text-xs font-black border border-zinc-800 bg-zinc-950 text-zinc-500 transition-all ${activeListId === l.id ? 'active-list-btn' : ''}">${l.nombre.toUpperCase()}</button>
+            `).join('');
+            if(allLists.length > 0 && !activeListId) selectList(allLists[0].id, allLists[0].nombre);
         }
 
-        async function addStream() {
-            const cid = document.getElementById('stream-id').value;
-            if(!cid) return;
-            const { error } = await clienteDB.from('streams_privados').insert([{ content_id: cid, user_email: currentUser.email }]);
-            if(!error) { document.getElementById('stream-id').value = ""; cargarLista(); }
+        function selectList(id, name) { activeListId = id; modoEdicion = false; selectedSongs = []; actualizarInterfazModo(); document.getElementById('area-canciones').classList.remove('hidden'); document.getElementById('titulo-lista-activa').innerText = name; loadSongs(); }
+
+        async function confirmarBorrarLista() {
+            if(!confirm("¿Borrar esta lista y todo su contenido?")) return;
+            await client.from('mis_listas').delete().eq('id', activeListId);
+            activeListId = null; loadLists();
         }
 
-        async function cargarLista() {
-            const { data } = await clienteDB.from('streams_privados').select('*').order('created_at', {ascending: false});
-            const lista = document.getElementById('lista-streams');
-            lista.innerHTML = '';
-            if(data) {
-                data.forEach(item => {
-                    lista.innerHTML += `
-                        <div onclick="playStream('${item.content_id}')" class="p-4 bg-zinc-900 border border-zinc-800 rounded flex justify-between cursor-pointer hover:border-indigo-500">
-                            <span>ID: ${item.content_id}</span>
-                            <span class="text-indigo-500">▶</span>
-                        </div>`;
-                });
+        // --- MOTOR DE IMPORTACIÓN PASO A PASO (UNIFICADO) ---
+        async function smartAdd() {
+            const input = document.getElementById('stream-input'), val = input.value.trim(); if(!val) return;
+            document.getElementById('import-loader').classList.remove('hidden');
+
+            if(val.includes('list=PL')) {
+                try {
+                    const listId = val.split('list=')[1].split('&')[0];
+                    // Usamos un proxy fiable para leer el HTML de la lista
+                    const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent('https://www.youtube.com/playlist?list='+listId)}`);
+                    const html = await res.text();
+                    
+                    // Extraer todos los IDs de vídeo
+                    const matches = [...html.matchAll(/"videoId":"([^"]{11})"/g)];
+                    queueImport = [...new Set(matches.map(m => m[1]))].slice(0, 50);
+                    
+                    if(queueImport.length > 0) {
+                        indexImport = 0;
+                        input.value = "";
+                        document.getElementById('import-loader').classList.add('hidden');
+                        abrirPasoImportacion();
+                    } else {
+                        alert("No se detectaron vídeos en la lista.");
+                    }
+                } catch(e) { alert("Error de conexión con YouTube"); }
+            } else {
+                const id = val.includes('v=') ? val.split('v=')[1].split('&')[0] : (val.includes('be/') ? val.split('be/')[1].split('?')[0] : val);
+                let t = "Nueva Pista";
+                try { t = (await (await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`)).json()).title; } catch(e){}
+                await client.from('mis_canciones').insert([{ content_id: id, titulo_personalizado: t, lista_id: activeListId, user_email: user.email }]);
+                input.value = ""; document.getElementById('import-loader').classList.add('hidden'); loadSongs();
             }
         }
 
-        function playStream(id) {
-            document.getElementById('btn-stop').classList.remove('hidden');
-            document.getElementById('player').innerHTML = `<iframe src="https://vid.puffyan.us/embed/${id}?listen=1&autoplay=1"></iframe>`;
+        async function abrirPasoImportacion() {
+            if(indexImport >= queueImport.length) { cerrarModal('import-modal'); loadSongs(); return; }
+            const cur = queueImport[indexImport];
+            document.getElementById('import-preview').src = `https://img.youtube.com/vi/${cur}/mqdefault.jpg`;
+            document.getElementById('import-count').innerText = `PISTA ${indexImport + 1} DE ${queueImport.length}`;
+            document.getElementById('import-title').innerText = "Obteniendo título...";
+            abrirModal('import-modal');
+            try { 
+                const d = await (await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${cur}&format=json`)).json(); 
+                document.getElementById('import-title').innerText = d.title; 
+            } catch(e){ document.getElementById('import-title').innerText = "Vídeo: " + cur; }
         }
 
-        function stopStream() {
-            document.getElementById('player').innerHTML = "";
-            document.getElementById('btn-stop').classList.add('hidden');
+        async function confirmImport() {
+            const cur = queueImport[indexImport];
+            const title = document.getElementById('import-title').innerText;
+            await client.from('mis_canciones').insert([{ content_id: cur, titulo_personalizado: title, lista_id: activeListId, user_email: user.email }]);
+            indexImport++; abrirPasoImportacion();
         }
+        function skipImport() { indexImport++; abrirPasoImportacion(); }
+        function cancelarImportacion() { queueImport = []; cerrarModal('import-modal'); loadSongs(); }
+
+        // --- GESTIÓN MAESTRO ---
+        function toggleModoEdicion() { modoEdicion = !modoEdicion; selectedSongs = []; actualizarInterfazModo(); loadSongs(); }
+        
+        function actualizarInterfazModo() {
+            const btn = document.getElementById('btn-gestionar'), panel = document.getElementById('panel-maestro'), input = document.getElementById('normal-input');
+            if(modoEdicion) { 
+                btn.innerText = "Cerrar Gestión"; btn.style.background = "#fff"; btn.style.color = "#000";
+                panel.classList.remove('hidden'); input.classList.add('hidden'); 
+            } else { 
+                btn.innerText = "Gestionar Lista"; btn.style.background = ""; btn.style.color = "";
+                panel.classList.add('hidden'); input.classList.remove('hidden'); 
+            }
+            document.getElementById('count-selected').innerText = `${selectedSongs.length} Seleccionadas`;
+        }
+
+        function toggleSelect(id) { if(!modoEdicion) return; const idx = selectedSongs.indexOf(id); if(idx > -1) selectedSongs.splice(idx, 1); else selectedSongs.push(id); loadSongs(); document.getElementById('count-selected').innerText = `${selectedSongs.length} Seleccionadas`; }
+
+        async function guardarCambiosNombres() {
+            const inps = document.querySelectorAll('.edit-name-input');
+            for(let i of inps) await client.from('mis_canciones').update({ titulo_personalizado: i.value }).eq('id', i.dataset.id);
+            toggleModoEdicion();
+        }
+
+        function abrirModalMover() {
+            if(selectedSongs.length === 0) return;
+            const cont = document.getElementById('lista-destinos-mover');
+            cont.innerHTML = allLists.map(l => `<button onclick="ejecutarMovimiento('${l.id}')" class="w-full p-4 bg-black/40 rounded-xl text-xs font-bold border border-zinc-800 hover:border-yellow-500 text-white uppercase">${l.nombre}</button>`).join('');
+            abrirModal('move-modal');
+        }
+
+        async function ejecutarMovimiento(nuevaId) { for(let id of selectedSongs) await client.from('mis_canciones').update({ lista_id: nuevaId }).eq('id', id); cerrarModal('move-modal'); toggleModoEdicion(); }
+
+        async function borrarSeleccion() {
+            if(!confirm(`¿Borrar las ${selectedSongs.length} seleccionadas?`)) return;
+            for(let id of selectedSongs) await client.from('mis_canciones').delete().eq('id', id);
+            toggleModoEdicion();
+        }
+
+        async function loadSongs() {
+            const { data } = await client.from('mis_canciones').select('*').eq('lista_id', activeListId).order('created_at', {ascending: false});
+            currentSongs = data || [];
+            document.getElementById('contenedor-canciones').innerHTML = currentSongs.map((c, i) => {
+                const isSelected = selectedSongs.includes(c.id);
+                if(modoEdicion) {
+                    return `<div class="flex items-center gap-4 p-4 rounded-3xl border border-yellow-500/10 bg-yellow-500/5" onclick="toggleSelect('${c.id}')">
+                        <div class="checkbox-custom ${isSelected ? 'checked' : ''}"></div>
+                        <input type="text" value="${c.titulo_personalizado}" data-id="${c.id}" onclick="event.stopPropagation()" class="edit-name-input flex-1 bg-transparent border-b border-zinc-800 outline-none focus:border-yellow-500 text-white font-bold">
+                    </div>`;
+                } else {
+                    return `<div class="flex items-center justify-between p-4 bg-zinc-900/40 rounded-3xl hover:bg-zinc-800 transition cursor-pointer" onclick="playSong(${i})">
+                        <div class="flex items-center gap-5 truncate">
+                            <img src="https://img.youtube.com/vi/${c.content_id}/mqdefault.jpg" class="w-14 h-14 rounded-xl object-cover shadow-lg">
+                            <p class="font-bold text-sm truncate ${playingIndex === i ? 'oro-premium' : ''} text-white">${c.titulo_personalizado}</p>
+                        </div>
+                    </div>`;
+                }
+            }).join('');
+        }
+
+        // --- REPRODUCTOR ---
+        function playSong(i) {
+            if(modoEdicion || i < 0) return; playingIndex = i; const s = currentSongs[i];
+            document.getElementById('player-title').innerText = s.titulo_personalizado;
+            document.getElementById('player-cover').src = `https://img.youtube.com/vi/${s.content_id}/mqdefault.jpg`;
+            document.getElementById('player-bar').classList.remove('translate-y-full');
+            ytPlayer.loadVideoById(s.content_id); setPlayState(true); loadSongs();
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({ title: s.titulo_personalizado, artwork: [{ src: `https://img.youtube.com/vi/${s.content_id}/maxresdefault.jpg`, type: 'image/jpeg' }] });
+                navigator.mediaSession.setActionHandler('previoustrack', prevSong); navigator.mediaSession.setActionHandler('nexttrack', nextSong);
+            }
+        }
+        function togglePlay() { isPlaying ? ytPlayer.pauseVideo() : ytPlayer.playVideo(); }
+        function setPlayState(p) { isPlaying = p; document.getElementById('icon-play').classList.toggle('hidden', p); document.getElementById('icon-pause').classList.toggle('hidden', !p); if ('mediaSession' in navigator) navigator.mediaSession.playbackState = p ? "playing" : "paused"; }
+        function nextSong() { playSong(playingIndex + 1); }
+        function prevSong() { playSong(playingIndex - 1); }
+        function setVolume(v) { ytPlayer.setVolume(v); }
+        function onPlayerStateChange(e) { if(e.data === YT.PlayerState.PLAYING) setPlayState(true); if(e.data === YT.PlayerState.PAUSED) setPlayState(false); if(e.data === YT.PlayerState.ENDED) nextSong(); }
     </script>
 </body>
 </html>
