@@ -193,8 +193,8 @@
 
     <script>
         // === SUSTITUYE AQUI CON TUS CLAVES DE SUPABASE ===
-        const SU_URL = 'ESCRIBE_AQUI_TU_URL';
-        const SU_KEY = 'ESCRIBE_AQUI_TU_KEY';
+       const SU_URL = 'https://pgdouwffkptdraboycnz.supabase.co';
+const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
         const client = window.supabase.createClient(SU_URL, SU_KEY);
         
         let user = null, activeListId = null, currentSongs = [], selectedSongs = [], playingIndex = -1, ytPlayer, isPlaying = false, modoEdicion = false, queueImport = [], indexImport = 0, allLists = [];
