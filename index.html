@@ -123,7 +123,7 @@
                     + AÑADIR
                 </button>
                 <div class="relative flex-1">
-                    <input type="text" id="search-song" placeholder="Buscar canción..." class="w-full bg-[#001d3d]/30 px-6 py-3 rounded-2xl border border-zinc-800 outline-none focus:border-yellow-500 text-sm text-white transition shadow-lg" oninput="filterSongs(this.value)">
+                    <input type="text" id="search-song" placeholder="Buscar en todas tus listas..." class="w-full bg-[#001d3d]/30 px-6 py-3 rounded-2xl border border-zinc-800 outline-none focus:border-yellow-500 text-sm text-white transition shadow-lg" oninput="filterSongs(this.value)">
                 </div>
             </div>
 
@@ -194,10 +194,10 @@
     <script>
         // === SUSTITUYE AQUI CON TUS CLAVES DE SUPABASE ===
        const SU_URL = 'https://pgdouwffkptdraboycnz.supabase.co';
-const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
+    const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
         const client = window.supabase.createClient(SU_URL, SU_KEY);
         
-        let user = null, activeListId = null, currentSongs = [], selectedSongs = [], playingIndex = -1, ytPlayer, isPlaying = false, modoEdicion = false, queueImport = [], indexImport = 0, allLists = [];
+        let user = null, activeListId = null, currentSongs = [], allUserSongs = [], selectedSongs = [], playingIndex = -1, playingSongId = null, ytPlayer, isPlaying = false, modoEdicion = false, queueImport = [], indexImport = 0, allLists = [];
         let progressTimer;
         let isPlayerMinimized = false;
 
@@ -274,16 +274,6 @@ const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
             if(!el.classList.contains('hidden')) document.getElementById('stream-input').focus();
         }
 
-        // --- BUSCADOR EN TIEMPO REAL ---
-        function filterSongs(val) {
-            const term = val.toLowerCase();
-            const items = document.querySelectorAll('.song-item');
-            items.forEach(item => {
-                if(item.dataset.title.includes(term)) item.classList.remove('hidden');
-                else item.classList.add('hidden');
-            });
-        }
-
         // --- MOTOR DE IMPORTACIÓN PLAYLIST (SISTEMA HIDRA MULTI-SERVIDOR) ---
         async function smartAdd() {
             const input = document.getElementById('stream-input'), val = input.value.trim(); if(!val) return;
@@ -336,7 +326,7 @@ const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
                     if(queueImport.length > 0) {
                         indexImport = 0; input.value = ""; 
                         document.getElementById('import-loader').classList.add('hidden');
-                        document.getElementById('normal-input').classList.add('hidden'); // Ocultar input tras éxito
+                        document.getElementById('normal-input').classList.add('hidden'); 
                         abrirPasoImportacion();
                     } else {
                         alert("Los servidores de lectura han fallado o la lista es Privada. Inténtalo en 5 minutos.");
@@ -353,7 +343,7 @@ const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
                 await client.from('mis_canciones').insert([{ content_id: id, titulo_personalizado: t, lista_id: activeListId, user_email: user.email }]);
                 input.value = ""; 
                 document.getElementById('import-loader').classList.add('hidden'); 
-                document.getElementById('normal-input').classList.add('hidden'); // Ocultar input tras éxito
+                document.getElementById('normal-input').classList.add('hidden');
                 loadSongs();
             }
         }
@@ -381,7 +371,7 @@ const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
         function cancelarImportacion() { queueImport = []; cerrarModal('import-modal'); loadSongs(); }
 
         // --- GESTIÓN MAESTRO ---
-        function toggleModoEdicion() { modoEdicion = !modoEdicion; selectedSongs = []; actualizarInterfazModo(); loadSongs(); }
+        function toggleModoEdicion() { modoEdicion = !modoEdicion; selectedSongs = []; actualizarInterfazModo(); renderSongs(); }
         
         function actualizarInterfazModo() {
             const btn = document.getElementById('btn-gestionar'), panel = document.getElementById('panel-maestro'), barraTools = document.getElementById('barra-herramientas');
@@ -399,7 +389,7 @@ const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
             document.getElementById('count-selected').innerText = `${selectedSongs.length} Seleccionadas`;
         }
 
-        function toggleSelect(id) { if(!modoEdicion) return; const idx = selectedSongs.indexOf(id); if(idx > -1) selectedSongs.splice(idx, 1); else selectedSongs.push(id); loadSongs(); document.getElementById('count-selected').innerText = `${selectedSongs.length} Seleccionadas`; }
+        function toggleSelect(id) { if(!modoEdicion) return; const idx = selectedSongs.indexOf(id); if(idx > -1) selectedSongs.splice(idx, 1); else selectedSongs.push(id); renderSongs(); document.getElementById('count-selected').innerText = `${selectedSongs.length} Seleccionadas`; }
 
         async function guardarCambiosEdicion() {
             const nuevoNombre = document.getElementById('input-edit-lista').value.trim();
@@ -435,29 +425,65 @@ const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
             toggleModoEdicion();
         }
 
+        // --- MOTOR DE BÚSQUEDA GLOBAL ---
         async function loadSongs() {
-            const { data } = await client.from('mis_canciones').select('*').eq('lista_id', activeListId).order('created_at', {ascending: false});
-            currentSongs = data || [];
+            // Descargamos TODAS las canciones del usuario en memoria
+            const { data } = await client.from('mis_canciones').select('*').order('created_at', {ascending: false});
+            allUserSongs = data || [];
+            renderSongs();
+        }
+
+        function filterSongs(val) {
+            renderSongs(); // Volvemos a dibujar basándonos en el texto
+        }
+
+        function renderSongs() {
+            const searchVal = document.getElementById('search-song').value.trim().toLowerCase();
+            const btnGestionar = document.getElementById('btn-gestionar');
+            
+            if (searchVal !== "") {
+                // Modo Búsqueda Global (Busca en TODAS las listas)
+                currentSongs = allUserSongs.filter(c => c.titulo_personalizado.toLowerCase().includes(searchVal));
+                document.getElementById('titulo-lista-activa').innerText = "Resultados Globales";
+                btnGestionar.classList.add('hidden'); // Ocultar gestión mientras buscas
+            } else {
+                // Modo Lista Normal
+                currentSongs = allUserSongs.filter(c => c.lista_id === activeListId);
+                const activeList = allLists.find(l => l.id === activeListId);
+                if(activeList) {
+                    document.getElementById('titulo-lista-activa').innerText = activeList.nombre;
+                    document.getElementById('input-edit-lista').value = activeList.nombre;
+                }
+                if(!modoEdicion) btnGestionar.classList.remove('hidden'); 
+            }
+
             document.getElementById('contenedor-canciones').innerHTML = currentSongs.map((c, i) => {
                 const isSelected = selectedSongs.includes(c.id);
-                // Aquí metemos la clase song-item y el data-title para el buscador
+                
+                // Si estamos en búsqueda global, sacamos el nombre de la lista a la que pertenece
+                let badgeLista = "";
+                if(searchVal !== "") {
+                    const listData = allLists.find(l => l.id === c.lista_id);
+                    if(listData) badgeLista = `<p class="mt-1 text-[9px] text-zinc-500 font-bold uppercase tracking-widest"><span class="text-yellow-600">EN:</span> ${listData.nombre}</p>`;
+                }
+
                 if(modoEdicion) {
-                    return `<div class="song-item flex items-center gap-4 p-4 rounded-3xl border border-yellow-500/10 bg-yellow-500/5" data-title="${c.titulo_personalizado.replace(/"/g, '&quot;').toLowerCase()}" onclick="toggleSelect('${c.id}')">
+                    return `<div class="song-item flex items-center gap-4 p-4 rounded-3xl border border-yellow-500/10 bg-yellow-500/5" onclick="toggleSelect('${c.id}')">
                         <div class="checkbox-custom ${isSelected ? 'checked' : ''}"></div>
-                        <input type="text" value="${c.titulo_personalizado}" data-id="${c.id}" onclick="event.stopPropagation()" class="edit-name-input flex-1 bg-transparent border-b border-zinc-800 outline-none focus:border-yellow-500 text-white font-bold">
+                        <input type="text" value="${c.titulo_personalizado.replace(/"/g, '&quot;')}" data-id="${c.id}" onclick="event.stopPropagation()" class="edit-name-input flex-1 bg-transparent border-b border-zinc-800 outline-none focus:border-yellow-500 text-white font-bold">
                     </div>`;
                 } else {
-                    return `<div class="song-item flex items-center justify-between p-4 bg-zinc-900/40 rounded-3xl hover:bg-zinc-800 transition cursor-pointer" data-title="${c.titulo_personalizado.replace(/"/g, '&quot;').toLowerCase()}" onclick="playSong(${i})">
-                        <div class="flex items-center gap-5 truncate">
-                            <img src="https://img.youtube.com/vi/${c.content_id}/mqdefault.jpg" class="w-14 h-14 rounded-xl object-cover shadow-lg">
-                            <p class="font-bold text-sm truncate ${playingIndex === i ? 'oro-premium' : ''} text-white">${c.titulo_personalizado}</p>
+                    return `<div class="song-item flex items-center justify-between p-4 bg-zinc-900/40 rounded-3xl hover:bg-zinc-800 transition cursor-pointer" onclick="playSong(${i})">
+                        <div class="flex items-center gap-5 truncate w-full">
+                            <img src="https://img.youtube.com/vi/${c.content_id}/mqdefault.jpg" class="w-14 h-14 rounded-xl object-cover shadow-lg flex-shrink-0">
+                            <div class="truncate w-full pr-4">
+                                <p class="font-bold text-sm truncate ${playingSongId === c.id ? 'oro-premium' : ''} text-white">${c.titulo_personalizado}</p>
+                                ${badgeLista}
+                            </div>
                         </div>
                     </div>`;
                 }
             }).join('');
-            
-            // Re-aplicar el filtro de búsqueda si hay algo escrito
-            filterSongs(document.getElementById('search-song').value);
         }
 
         // --- SISTEMA MINIMIZAR REPRODUCTOR ---
@@ -475,7 +501,9 @@ const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
         // --- REPRODUCTOR Y BARRA MINIMALISTA ---
         function playSong(i) {
             if(modoEdicion || i < 0 || i >= currentSongs.length) return; 
-            playingIndex = i; const s = currentSongs[i];
+            playingIndex = i; 
+            const s = currentSongs[i];
+            playingSongId = s.id; // Guardamos la ID para que el dorado no se pierda al buscar
             
             // Actualizar datos del reproductor
             document.getElementById('player-title').innerText = s.titulo_personalizado;
@@ -487,7 +515,7 @@ const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
             document.getElementById('player-bar').classList.remove('translate-y-full');
             document.getElementById('mini-player').classList.add('hidden');
             
-            ytPlayer.loadVideoById(s.content_id); setPlayState(true); loadSongs();
+            ytPlayer.loadVideoById(s.content_id); setPlayState(true); renderSongs();
             
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({ title: s.titulo_personalizado, artwork: [{ src: `https://img.youtube.com/vi/${s.content_id}/maxresdefault.jpg`, type: 'image/jpeg' }] });
@@ -528,8 +556,18 @@ const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
             ytPlayer.seekTo(ytPlayer.getDuration() * percent, true);
         }
 
-        function nextSong() { playSong(playingIndex + 1); }
-        function prevSong() { playSong(playingIndex - 1); }
+        // Para que Next y Prev funcionen perfecto aunque busques algo nuevo
+        function nextSong() { 
+            let idx = currentSongs.findIndex(c => c.id === playingSongId);
+            if(idx !== -1) playingIndex = idx;
+            playSong(playingIndex + 1); 
+        }
+        function prevSong() { 
+            let idx = currentSongs.findIndex(c => c.id === playingSongId);
+            if(idx !== -1) playingIndex = idx;
+            playSong(playingIndex - 1); 
+        }
+        
         function setVolume(v) { ytPlayer.setVolume(v); }
         function onPlayerStateChange(e) { if(e.data === YT.PlayerState.PLAYING) setPlayState(true); if(e.data === YT.PlayerState.PAUSED) setPlayState(false); if(e.data === YT.PlayerState.ENDED) nextSong(); }
     </script>
