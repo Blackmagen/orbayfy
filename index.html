@@ -220,6 +220,7 @@ const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
         }
 
         // --- MOTOR DE IMPORTACIÓN PLAYLIST (EL MÉTODO HACKER PURO - SIN PROXYS) ---
+        // --- MOTOR DE IMPORTACIÓN PLAYLIST (SISTEMA HIDRA MULTI-SERVIDOR) ---
         async function smartAdd() {
             const input = document.getElementById('stream-input'), val = input.value.trim(); if(!val) return;
             document.getElementById('import-loader').classList.remove('hidden');
@@ -229,31 +230,70 @@ const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
                     const listId = val.split('list=')[1].split('&')[0];
                     let ids = [];
 
-                    // INTENTO 1: Usando la API de Invidious/Piped (No es un proxy, es una API pura indetectable por Adblocks)
-                    try {
-                        const res = await fetch(`https://pipedapi.kavin.rocks/playlists/${listId}`);
-                        if(res.ok) {
-                            const data = await res.json();
-                            if(data.relatedStreams) ids = data.relatedStreams.map(v => v.url.split('?v=')[1]);
-                        }
-                    } catch(e) { console.log('API Piped bloqueada, cambiando a Lemnos...'); }
+                    // 1. Escuadrón Piped (4 servidores espejo por si el principal se cae)
+                    const pipedServers = [
+                        'https://pipedapi.smnz.de',
+                        'https://pipedapi.tokhmi.xyz',
+                        'https://api.piped.projectsegfau.lt',
+                        'https://pipedapi.kavin.rocks'
+                    ];
 
-                    // INTENTO 2: Usando la API espejo de LemnosLife (Acceso directo libre a datos de YouTube)
+                    for (let server of pipedServers) {
+                        if (ids.length > 0) break; // Si ya cazó la lista, se detiene
+                        try {
+                            const res = await fetch(`${server}/playlists/${listId}`);
+                            if(res.ok) {
+                                const data = await res.json();
+                                if(data.relatedStreams) ids = data.relatedStreams.map(v => v.url.split('?v=')[1]);
+                            }
+                        } catch(e) { console.log(`Fallo servidor: ${server}`); }
+                    }
+
+                    // 2. Si todos los Piped están caídos, ataca con LemnosLife
                     if(ids.length === 0) {
                         try {
                             const res2 = await fetch(`https://yt.lemnoslife.com/playlistItems?part=snippet&maxResults=50&playlistId=${listId}`);
                             if(res2.ok) {
                                 const data2 = await res2.json();
-                                if(data2.items) ids = data2.items.map(item => item.snippet.resourceId.videoId);
+                                if(data2.items) ids = data2.items.map(item => item.snippet?.resourceId?.videoId);
                             }
-                        } catch(e) { console.log('API Lemnos falló'); }
+                        } catch(e) { console.log('Fallo servidor Lemnos'); }
+                    }
+
+                    // 3. Último recurso de emergencia: Proxy crudo
+                    if(ids.length === 0) {
+                        try {
+                            const res3 = await fetch(`https://corsproxy.io/?${encodeURIComponent('https://www.youtube.com/playlist?list='+listId)}`);
+                            const html = await res3.text();
+                            const matches = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].map(m => m[1]);
+                            ids = [...new Set(matches)];
+                        } catch(e) { console.log('Fallo proxy de emergencia'); }
                     }
                     
+                    // Limpieza y envío
                     queueImport = [...new Set(ids)].filter(id => id && id.length === 11).slice(0, 50);
                     
                     if(queueImport.length > 0) {
                         indexImport = 0; input.value = ""; 
                         document.getElementById('import-loader').classList.add('hidden');
+                        abrirPasoImportacion();
+                    } else {
+                        alert("Los 6 servidores de lectura han fallado o la lista es completamente Privada. Inténtalo en 5 minutos.");
+                        document.getElementById('import-loader').classList.add('hidden');
+                    }
+                } catch(e) { 
+                    alert("Error crítico procesando el enlace."); 
+                    document.getElementById('import-loader').classList.add('hidden');
+                }
+            } else {
+                // Vídeo individual (Misma lógica intacta)
+                const id = val.includes('v=') ? val.split('v=')[1].split('&')[0] : (val.includes('be/') ? val.split('be/')[1].split('?')[0] : val);
+                let t = "Nueva Canción";
+                try { t = (await (await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`)).json()).title; } catch(e){}
+                await client.from('mis_canciones').insert([{ content_id: id, titulo_personalizado: t, lista_id: activeListId, user_email: user.email }]);
+                input.value = ""; document.getElementById('import-loader').classList.add('hidden'); loadSongs();
+            }
+        }
                         abrirPasoImportacion();
                     } else {
                         alert("No se pudo leer la lista. Asegúrate de que la Playlist en YouTube está como Pública o No Listada.");
