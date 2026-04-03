@@ -505,11 +505,11 @@
             
             ytPlayer.loadVideoById(s.content_id); setPlayState(true); renderSongs();
             
-            // --- ENGAÑAMOS A iOS AQUÍ ---
+            // --- LA TRAMPA DEFINITIVA PARA iOS ---
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({ 
                     title: s.titulo_personalizado, 
-                    artist: "Orbayfy Búnker", // Fuerza a iOS a pensar que es música
+                    artist: "Orbayfy Búnker", 
                     album: document.getElementById('titulo-lista-activa').innerText,
                     artwork: [
                         { src: `https://img.youtube.com/vi/${s.content_id}/mqdefault.jpg`, sizes: '320x180', type: 'image/jpeg' },
@@ -517,11 +517,15 @@
                     ] 
                 });
                 
-                // Declaramos todos los controles explícitamente
+                // Controles normales
                 navigator.mediaSession.setActionHandler('play', () => ytPlayer.playVideo());
                 navigator.mediaSession.setActionHandler('pause', () => ytPlayer.pauseVideo());
                 navigator.mediaSession.setActionHandler('previoustrack', () => prevSong());
                 navigator.mediaSession.setActionHandler('nexttrack', () => nextSong());
+                
+                // SECUESTRO DE LOS BOTONES DE 15 SEGUNDOS DE iOS
+                navigator.mediaSession.setActionHandler('seekforward', () => nextSong());
+                navigator.mediaSession.setActionHandler('seekbackward', () => prevSong());
             }
         }
 
