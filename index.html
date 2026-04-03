@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamVault Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background-color: #09090b; color: white; }
+        .hidden-engine { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body class="p-6 max-w-md mx-auto">
+
+    <h1 class="text-2xl font-bold mb-6 text-indigo-500">StreamVault Demo</h1>
+
+    <div id="login-section" class="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+        <h2 class="text-lg mb-4">Acceso Seguro</h2>
+        <input type="email" id="email" placeholder="Tu Email" class="w-full bg-black p-3 rounded mb-3 border border-zinc-700">
+        <input type="password" id="pass" placeholder="Contraseña" class="w-full bg-black p-3 rounded mb-4 border border-zinc-700">
+        <button onclick="registrar()" class="bg-zinc-700 px-4 py-2 rounded mr-2 text-sm">Registrarme</button>
+        <button onclick="entrar()" class="bg-indigo-600 px-4 py-2 rounded text-sm">Entrar</button>
+        <p id="msg" class="text-xs text-orange-400 mt-3"></p>
+    </div>
+
+    <div id="app-section" class="hidden">
+        <p id="user-info" class="text-xs text-zinc-500 mb-4"></p>
+        
+        <div class="flex gap-2 mb-6">
+            <input type="text" id="stream-id" placeholder="Pega el ID aquí..." class="flex-1 bg-zinc-900 p-3 rounded border border-zinc-800">
+            <button onclick="addStream()" class="bg-indigo-600 px-4 rounded font-bold">+</button>
+        </div>
+
+        <div id="lista-streams" class="space-y-2"></div>
+
+        <button onclick="stopStream()" class="mt-8 w-full bg-red-900/50 text-red-400 p-3 rounded text-sm hidden" id="btn-stop">
+            Detener Audio
+        </button>
+    </div>
+
+    <div id="player" class="hidden-engine"></div>
+
+    <script>
+        // ⚠️ PEGA AQUÍ TUS DATOS DE SUPABASE (entre las comillas simples) ⚠️
+        const SU_URL = 'https://pgdouwffkptdraboycnz.supabase.co';
+        const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
+        
+        // EL ARREGLO ESTÁ AQUÍ (clienteDB en lugar de supabase)
+        const clienteDB = window.supabase.createClient(SU_URL, SU_KEY);
+        let currentUser = null;
+
+        async function registrar() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('pass').value;
+            const { error } = await clienteDB.auth.signUp({ email, password });
+            if(error) document.getElementById('msg').innerText = error.message;
+            else document.getElementById('msg').innerText = "¡Registro exitoso! Dale a Entrar.";
+        }
+
+        async function entrar() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('pass').value;
+            const { data, error } = await clienteDB.auth.signInWithPassword({ email, password });
+            if(error) document.getElementById('msg').innerText = error.message;
+            else { currentUser = data.user; mostrarApp(); }
+        }
+
+        function mostrarApp() {
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('app-section').classList.remove('hidden');
+            document.getElementById('user-info').innerText = "Usuario: " + currentUser.email;
+            cargarLista();
+        }
+
+        async function addStream() {
+            const cid = document.getElementById('stream-id').value;
+            if(!cid) return;
+            const { error } = await clienteDB.from('streams_privados').insert([{ content_id: cid, user_email: currentUser.email }]);
+            if(!error) { document.getElementById('stream-id').value = ""; cargarLista(); }
+        }
+
+        async function cargarLista() {
+            const { data } = await clienteDB.from('streams_privados').select('*').order('created_at', {ascending: false});
+            const lista = document.getElementById('lista-streams');
+            lista.innerHTML = '';
+            if(data) {
+                data.forEach(item => {
+                    lista.innerHTML += `
+                        <div onclick="playStream('${item.content_id}')" class="p-4 bg-zinc-900 border border-zinc-800 rounded flex justify-between cursor-pointer hover:border-indigo-500">
+                            <span>ID: ${item.content_id}</span>
+                            <span class="text-indigo-500">▶</span>
+                        </div>`;
+                });
+            }
+        }
+
+        function playStream(id) {
+            document.getElementById('btn-stop').classList.remove('hidden');
+            document.getElementById('player').innerHTML = `<iframe src="https://vid.puffyan.us/embed/${id}?listen=1&autoplay=1"></iframe>`;
+        }
+
+        function stopStream() {
+            document.getElementById('player').innerHTML = "";
+            document.getElementById('btn-stop').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
