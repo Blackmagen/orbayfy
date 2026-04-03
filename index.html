@@ -147,9 +147,9 @@
     <div id="yt-player-container" class="hidden-engine"></div>
 
     <script>
-        // === SUPABASE ===
-        const SU_URL = 'https://pgdouwffkptdraboycnz.supabase.co';
-const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
+        // === SUSTITUYE AQUI CON TUS CLAVES DE SUPABASE ===
+       const SU_URL = 'https://pgdouwffkptdraboycnz.supabase.co';
+        const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
         const client = window.supabase.createClient(SU_URL, SU_KEY);
         
         let user = null, activeListId = null, currentSongs = [], selectedSongs = [], playingIndex = -1, ytPlayer, isPlaying = false, modoEdicion = false, queueImport = [], indexImport = 0, allLists = [];
@@ -219,7 +219,6 @@ const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
             loadLists(); 
         }
 
-        // --- MOTOR DE IMPORTACIÓN PLAYLIST (EL MÉTODO HACKER PURO - SIN PROXYS) ---
         // --- MOTOR DE IMPORTACIÓN PLAYLIST (SISTEMA HIDRA MULTI-SERVIDOR) ---
         async function smartAdd() {
             const input = document.getElementById('stream-input'), val = input.value.trim(); if(!val) return;
@@ -287,24 +286,6 @@ const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
                 }
             } else {
                 // Vídeo individual (Misma lógica intacta)
-                const id = val.includes('v=') ? val.split('v=')[1].split('&')[0] : (val.includes('be/') ? val.split('be/')[1].split('?')[0] : val);
-                let t = "Nueva Canción";
-                try { t = (await (await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`)).json()).title; } catch(e){}
-                await client.from('mis_canciones').insert([{ content_id: id, titulo_personalizado: t, lista_id: activeListId, user_email: user.email }]);
-                input.value = ""; document.getElementById('import-loader').classList.add('hidden'); loadSongs();
-            }
-        }
-                        abrirPasoImportacion();
-                    } else {
-                        alert("No se pudo leer la lista. Asegúrate de que la Playlist en YouTube está como Pública o No Listada.");
-                        document.getElementById('import-loader').classList.add('hidden');
-                    }
-                } catch(e) { 
-                    alert("Error procesando el enlace."); 
-                    document.getElementById('import-loader').classList.add('hidden');
-                }
-            } else {
-                // Vídeo individual
                 const id = val.includes('v=') ? val.split('v=')[1].split('&')[0] : (val.includes('be/') ? val.split('be/')[1].split('?')[0] : val);
                 let t = "Nueva Canción";
                 try { t = (await (await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`)).json()).title; } catch(e){}
