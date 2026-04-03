@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orbayfy - Acceso Especial</title>
+    <title>Orbayfy - Búnker Privado</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -12,12 +12,12 @@
         .azul-premium { background: linear-gradient(135deg, #001d3d 0%, #003566 100%); }
         .oro-premium { color: #ffc300; }
         .bg-oro { background-color: #ffc300; }
-        .glass { background: rgba(0, 29, 61, 0.95); backdrop-filter: blur(40px); border-top: 2px solid rgba(255, 195, 0, 0.1); z-index: 100; }
-        .modal-bg { background: rgba(0, 8, 20, 0.98); backdrop-filter: blur(20px); }
+        .glass { background: rgba(0, 29, 61, 0.98); backdrop-filter: blur(40px); border-top: 2px solid rgba(255, 195, 0, 0.2); z-index: 9999; }
+        .modal-bg { background: rgba(0, 8, 20, 0.98); backdrop-filter: blur(20px); z-index: 10000; }
         .hidden-engine { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
         
-        /* Checkbox y Estilos de Gestión */
-        .checkbox-custom { width: 22px; height: 22px; border: 2px solid #ffc300; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        /* Controles Maestro */
+        .checkbox-custom { width: 22px; height: 22px; border: 2px solid #ffc300; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;}
         .checkbox-custom.checked { background: #ffc300; }
         .checkbox-custom.checked::after { content: '✓'; color: #000; font-weight: 900; }
         
@@ -29,7 +29,7 @@
 </head>
 <body class="pb-44">
 
-    <div id="login-section" class="fixed inset-0 z-[300] bg-[#000814] flex items-center justify-center p-6">
+    <div id="login-section" class="fixed inset-0 z-[1000] bg-[#000814] flex items-center justify-center p-6 transition-all duration-500">
         <div class="w-full max-w-sm p-10 rounded-[3rem] border border-zinc-800 azul-premium text-center shadow-2xl">
             <h1 class="text-5xl font-black mb-2 italic tracking-tighter text-white">ORBAYFY<span class="oro-premium">.</span></h1>
             <p class="text-zinc-400 text-[10px] mb-10 uppercase tracking-[0.3em] font-bold">Acceso Especial</p>
@@ -40,24 +40,24 @@
         </div>
     </div>
 
-    <div id="import-modal" class="hidden fixed inset-0 z-[450] modal-bg flex items-center justify-center p-6">
+    <div id="import-modal" class="hidden fixed inset-0 modal-bg flex items-center justify-center p-6">
         <div class="w-full max-w-sm azul-premium p-8 rounded-[2.5rem] border border-yellow-500/30 shadow-2xl text-center">
             <p id="import-count" class="text-[10px] text-yellow-500 mb-4 uppercase tracking-widest font-bold">Analizando lista...</p>
             <img id="import-preview" src="" class="w-full aspect-video rounded-3xl object-cover mb-4 border border-zinc-800 shadow-xl bg-black">
             <p id="import-title" class="font-bold text-sm truncate px-2 mb-8 text-white">Cargando...</p>
             <div class="flex gap-3">
-                <button onclick="skipImport()" class="w-1/3 py-4 text-zinc-500 font-bold uppercase text-xs">SALTAR</button>
+                <button onclick="skipImport()" class="w-1/3 py-4 text-zinc-500 font-bold uppercase text-xs hover:text-white">SALTAR</button>
                 <button onclick="confirmImport()" class="w-2/3 bg-white text-black py-4 rounded-2xl font-black uppercase text-xs shadow-lg">AÑADIR</button>
             </div>
             <button onclick="cancelarImportacion()" class="mt-6 text-[10px] text-zinc-600 uppercase font-bold hover:text-white transition">Detener Importación</button>
         </div>
     </div>
 
-    <div id="move-modal" class="hidden fixed inset-0 z-[500] modal-bg flex items-center justify-center p-6 text-white text-center">
+    <div id="move-modal" class="hidden fixed inset-0 modal-bg flex items-center justify-center p-6 text-white text-center">
         <div class="w-full max-w-sm azul-premium p-8 rounded-[2.5rem] border border-yellow-500/30 shadow-2xl">
             <h3 class="text-xl font-black mb-6 italic">Mover Selección a...</h3>
             <div id="lista-destinos-mover" class="space-y-2 mb-8 max-h-60 overflow-y-auto no-scrollbar"></div>
-            <button onclick="cerrarModal('move-modal')" class="text-xs text-zinc-500 font-bold uppercase">Cerrar</button>
+            <button onclick="cerrarModal('move-modal')" class="text-xs text-zinc-500 font-bold uppercase hover:text-white">Cancelar</button>
         </div>
     </div>
 
@@ -74,25 +74,27 @@
 
         <section id="area-canciones" class="hidden">
             <div class="flex items-center justify-between mb-8">
-                <div class="flex flex-col">
-                    <h3 id="titulo-lista-activa" class="text-3xl font-black tracking-tight text-white">---</h3>
-                    <button onclick="toggleModoEdicion()" id="btn-gestionar" class="text-[10px] oro-premium font-black uppercase tracking-widest border border-yellow-500/30 px-4 py-1.5 rounded-full bg-yellow-500/5 mt-2">Gestionar Lista</button>
+                <div class="flex flex-col w-full pr-4">
+                    <h3 id="titulo-lista-activa" class="text-3xl font-black tracking-tight text-white mb-1">---</h3>
+                    <input type="text" id="input-edit-lista" class="text-3xl font-black tracking-tight text-white bg-transparent border-b border-yellow-500 outline-none w-full mb-1 hidden">
+                    
+                    <button onclick="toggleModoEdicion()" id="btn-gestionar" class="text-[10px] oro-premium font-black uppercase tracking-widest border border-yellow-500/30 px-4 py-1.5 rounded-full bg-yellow-500/5 mt-2 w-max transition-all">Gestionar Lista</button>
                 </div>
-                <button onclick="confirmarBorrarLista()" class="text-[10px] text-zinc-600 font-black uppercase hover:text-red-500 transition">Borrar Lista</button>
+                <button onclick="confirmarBorrarLista()" class="text-[10px] text-zinc-600 font-black uppercase hover:text-red-500 transition text-right">Borrar Lista</button>
             </div>
 
             <div id="panel-maestro" class="hidden mb-8 p-6 azul-premium rounded-[2.5rem] border border-yellow-500/20 shadow-2xl">
                 <p id="count-selected" class="text-[10px] font-black text-white uppercase mb-4 tracking-widest">0 Seleccionadas</p>
                 <div class="flex gap-2">
-                    <button onclick="abrirModalMover()" class="flex-1 bg-indigo-600 py-3 rounded-xl text-[10px] font-black text-white uppercase">Mover</button>
-                    <button onclick="borrarSeleccion()" class="flex-1 bg-red-600 py-3 rounded-xl text-[10px] font-black text-white uppercase">Borrar</button>
-                    <button onclick="guardarCambiosNombres()" class="flex-1 bg-white text-black py-3 rounded-xl text-[10px] font-black uppercase">Guardar</button>
+                    <button onclick="abrirModalMover()" class="flex-1 bg-indigo-600 py-3 rounded-xl text-[10px] font-black text-white uppercase shadow-lg">Mover</button>
+                    <button onclick="borrarSeleccion()" class="flex-1 bg-red-600 py-3 rounded-xl text-[10px] font-black text-white uppercase shadow-lg">Borrar</button>
+                    <button onclick="guardarCambiosEdicion()" class="flex-1 bg-white text-black py-3 rounded-xl text-[10px] font-black uppercase shadow-lg">Guardar Todo</button>
                 </div>
             </div>
 
             <div id="normal-input" class="relative mb-8">
                 <input type="text" id="stream-input" placeholder="Vídeo o Playlist de YouTube..." class="w-full bg-[#001d3d]/50 p-6 rounded-[2rem] border border-zinc-800 outline-none focus:ring-2 focus:ring-yellow-500 transition text-sm text-white pr-20">
-                <button onclick="smartAdd()" class="absolute right-3 top-3 bottom-3 bg-oro text-black px-8 rounded-2xl font-black text-2xl shadow-lg active:scale-90">+</button>
+                <button onclick="smartAdd()" class="absolute right-3 top-3 bottom-3 bg-oro text-black px-8 rounded-2xl font-black text-2xl shadow-lg active:scale-90 transition">+</button>
                 <div id="import-loader" class="hidden absolute right-24 top-1/2 -translate-y-1/2"><div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div></div>
             </div>
 
@@ -100,7 +102,7 @@
         </section>
     </div>
 
-    <div id="list-modal" class="hidden fixed inset-0 z-[400] modal-bg flex items-center justify-center p-6">
+    <div id="list-modal" class="hidden fixed inset-0 modal-bg flex items-center justify-center p-6">
         <div class="w-full max-w-sm azul-premium p-8 rounded-[2.5rem] border border-yellow-500/30 text-center">
             <h3 class="text-xl font-black mb-6 italic text-white">Nueva Lista</h3>
             <input type="text" id="list-name-input" placeholder="Nombre..." class="w-full bg-black p-5 rounded-2xl border border-zinc-800 outline-none mb-8 text-white">
@@ -117,12 +119,12 @@
                 <img id="player-cover" src="" class="w-16 h-16 rounded-2xl object-cover shadow-2xl">
                 <div class="truncate">
                     <p id="player-title" class="font-black text-sm truncate pr-4 text-white">---</p>
-                    <p class="text-[9px] oro-premium font-bold uppercase tracking-widest italic">Acceso Especial</p>
+                    <p class="text-[9px] oro-premium font-bold uppercase tracking-widest italic">Reproduciendo</p>
                 </div>
             </div>
             <div class="flex items-center gap-8">
                 <button onclick="prevSong()" class="text-zinc-500 hover:text-white transition"><svg width="32" height="32" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
-                <button onclick="togglePlay()" id="btn-play-pause" class="w-16 h-16 bg-oro text-black rounded-full flex items-center justify-center hover:scale-105 transition shadow-2xl"><svg id="icon-play" width="36" height="36" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><svg id="icon-pause" class="hidden" width="36" height="36" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
+                <button onclick="togglePlay()" id="btn-play-pause" class="w-16 h-16 bg-oro text-black rounded-full flex items-center justify-center hover:scale-105 transition shadow-2xl shadow-yellow-500/20"><svg id="icon-play" width="36" height="36" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><svg id="icon-pause" class="hidden" width="36" height="36" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
                 <button onclick="nextSong()" class="text-zinc-500 hover:text-white transition"><svg width="32" height="32" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
             </div>
             <div class="hidden sm:flex items-center gap-3 w-1/3 justify-end"><input type="range" id="volume-bar" value="100" min="0" max="100" class="w-20" oninput="setVolume(this.value)"></div>
@@ -132,28 +134,47 @@
     <div id="yt-player-container" class="hidden-engine"></div>
 
     <script>
-        const SU_URL = 'https://pgdouwffkptdraboycnz.supabase.co';
-        const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
+        // === SUSTITUYE AQUI CON TUS CLAVES DE SUPABASE ===
+       const SU_URL = 'https://pgdouwffkptdraboycnz.supabase.co';
+       const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
         const client = window.supabase.createClient(SU_URL, SU_KEY);
         
         let user = null, activeListId = null, currentSongs = [], selectedSongs = [], playingIndex = -1, ytPlayer, isPlaying = false, modoEdicion = false, queueImport = [], indexImport = 0, allLists = [];
 
+        // Inicializar YouTube API
         let tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api";
         document.getElementsByTagName('script')[0].parentNode.insertBefore(tag, null);
         function onYouTubeIframeAPIReady() { ytPlayer = new YT.Player('yt-player-container', { events: { 'onStateChange': onPlayerStateChange } }); }
 
+        // --- SESIÓN PERSISTENTE (Soluciona el problema de login) ---
+        client.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                user = session.user;
+                document.getElementById('login-section').classList.add('opacity-0');
+                setTimeout(() => { document.getElementById('login-section').classList.add('hidden'); }, 500);
+                document.getElementById('app-section').classList.remove('hidden');
+                loadLists();
+            } else {
+                document.getElementById('login-section').classList.remove('hidden', 'opacity-0');
+                document.getElementById('app-section').classList.add('hidden');
+            }
+        });
+
         async function entrar() {
             const e = document.getElementById('email').value, p = document.getElementById('pass').value;
-            const { data, error } = await client.auth.signInWithPassword({ email: e, password: p });
-            if(!error) { user = data.user; document.getElementById('login-section').classList.add('hidden'); document.getElementById('app-section').classList.remove('hidden'); loadLists(); }
-            else { document.getElementById('msg').innerText = "ERROR DE ACCESO"; }
+            const { error } = await client.auth.signInWithPassword({ email: e, password: p });
+            if(error) document.getElementById('msg').innerText = "ERROR DE ACCESO"; 
         }
-        function cerrarSesion() { client.auth.signOut(); location.reload(); }
+
+        async function cerrarSesion() { 
+            await client.auth.signOut(); 
+            location.reload(); 
+        }
 
         function abrirModal(id) { document.getElementById(id).classList.remove('hidden'); }
         function cerrarModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-        // --- GESTIÓN LISTAS ---
+        // --- GESTIÓN DE LISTAS ---
         async function guardarLista() {
             const n = document.getElementById('list-name-input').value; if(!n) return;
             await client.from('mis_listas').insert([{ nombre: n, user_email: user.email }]);
@@ -164,20 +185,33 @@
             const { data } = await client.from('mis_listas').select('*').order('created_at', {ascending: false});
             allLists = data || [];
             document.getElementById('contenedor-listas').innerHTML = allLists.map(l => `
-                <button onclick="selectList('${l.id}', '${l.nombre}')" class="px-8 py-4 rounded-3xl whitespace-nowrap text-xs font-black border border-zinc-800 bg-zinc-950 text-zinc-500 transition-all ${activeListId === l.id ? 'active-list-btn' : ''}">${l.nombre.toUpperCase()}</button>
+                <button onclick="selectList('${l.id}', '${l.nombre.replace(/'/g, "\\'")}')" class="px-8 py-4 rounded-3xl whitespace-nowrap text-xs font-black border border-zinc-800 bg-zinc-950 text-zinc-500 transition-all ${activeListId === l.id ? 'active-list-btn' : ''}">${l.nombre.toUpperCase()}</button>
             `).join('');
-            if(allLists.length > 0 && !activeListId) selectList(allLists[0].id, allLists[0].nombre);
+            
+            if(allLists.length > 0 && !activeListId) {
+                selectList(allLists[0].id, allLists[0].nombre);
+            } else if (allLists.length === 0) {
+                document.getElementById('area-canciones').classList.add('hidden');
+            }
         }
 
-        function selectList(id, name) { activeListId = id; modoEdicion = false; selectedSongs = []; actualizarInterfazModo(); document.getElementById('area-canciones').classList.remove('hidden'); document.getElementById('titulo-lista-activa').innerText = name; loadSongs(); }
+        function selectList(id, name) { 
+            activeListId = id; modoEdicion = false; selectedSongs = []; 
+            document.getElementById('area-canciones').classList.remove('hidden'); 
+            document.getElementById('titulo-lista-activa').innerText = name; 
+            document.getElementById('input-edit-lista').value = name;
+            actualizarInterfazModo(); loadLists(); loadSongs(); 
+        }
 
         async function confirmarBorrarLista() {
-            if(!confirm("¿Borrar esta lista y todo su contenido?")) return;
+            if(!confirm("¿Estás seguro de que quieres borrar esta lista? Se eliminarán todas sus canciones.")) return;
             await client.from('mis_listas').delete().eq('id', activeListId);
-            activeListId = null; loadLists();
+            activeListId = null; 
+            document.getElementById('area-canciones').classList.add('hidden');
+            loadLists(); // Ahora no te saca de la sesión
         }
 
-        // --- MOTOR DE IMPORTACIÓN PASO A PASO (¡NUEVO BLOQUE FIXEADO!) ---
+        // --- MOTOR DE IMPORTACIÓN PLAYLIST (PUENTE EN CRUDO) ---
         async function smartAdd() {
             const input = document.getElementById('stream-input'), val = input.value.trim(); if(!val) return;
             document.getElementById('import-loader').classList.remove('hidden');
@@ -185,34 +219,30 @@
             if(val.includes('list=')) {
                 try {
                     const listId = val.split('list=')[1].split('&')[0];
-                    // Usamos allorigins.win, un proxy más robusto para que YouTube no lo bloquee
-                    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://www.youtube.com/playlist?list='+listId)}`);
-                    const data = await res.json();
-                    const html = data.contents;
+                    // Usamos allorigins/raw que devuelve el HTML puro sin ser detectado tan fácil
+                    const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://www.youtube.com/playlist?list='+listId)}`);
+                    const html = await res.text();
                     
-                    // Doble rastreo para asegurar que sacamos los IDs
-                    const ids1 = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].map(m => m[1]);
-                    const ids2 = [...html.matchAll(/watch\?v=([a-zA-Z0-9_-]{11})/g)].map(m => m[1]);
-                    
-                    // Juntamos todo sin duplicados
-                    queueImport = [...new Set([...ids1, ...ids2])].filter(id => id.length === 11).slice(0, 50);
+                    // Expresión regular universal para sacar los IDs
+                    const ids = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].map(m => m[1]);
+                    queueImport = [...new Set(ids)].slice(0, 50); // Límite de 50 para no saturar
                     
                     if(queueImport.length > 0) {
-                        indexImport = 0;
-                        input.value = "";
+                        indexImport = 0; input.value = ""; 
                         document.getElementById('import-loader').classList.add('hidden');
                         abrirPasoImportacion();
                     } else {
-                        alert("No se detectaron vídeos en la lista. Asegúrate de que la lista en YouTube sea PÚBLICA o NO LISTADA.");
+                        alert("No se pudo leer la lista. Asegúrate de que sea Pública o No Listada.");
                         document.getElementById('import-loader').classList.add('hidden');
                     }
                 } catch(e) { 
-                    alert("Error de conexión al leer la lista de YouTube."); 
+                    alert("Error leyendo YouTube."); 
                     document.getElementById('import-loader').classList.add('hidden');
                 }
             } else {
+                // Vídeo individual
                 const id = val.includes('v=') ? val.split('v=')[1].split('&')[0] : (val.includes('be/') ? val.split('be/')[1].split('?')[0] : val);
-                let t = "Nueva Pista";
+                let t = "Nueva Canción";
                 try { t = (await (await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`)).json()).title; } catch(e){}
                 await client.from('mis_canciones').insert([{ content_id: id, titulo_personalizado: t, lista_id: activeListId, user_email: user.email }]);
                 input.value = ""; document.getElementById('import-loader').classList.add('hidden'); loadSongs();
@@ -223,13 +253,13 @@
             if(indexImport >= queueImport.length) { cerrarModal('import-modal'); loadSongs(); return; }
             const cur = queueImport[indexImport];
             document.getElementById('import-preview').src = `https://img.youtube.com/vi/${cur}/mqdefault.jpg`;
-            document.getElementById('import-count').innerText = `PISTA ${indexImport + 1} DE ${queueImport.length}`;
-            document.getElementById('import-title').innerText = "Obteniendo título...";
+            document.getElementById('import-count').innerText = `CANCION ${indexImport + 1} DE ${queueImport.length}`;
+            document.getElementById('import-title').innerText = "Cargando título...";
             abrirModal('import-modal');
             try { 
                 const d = await (await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${cur}&format=json`)).json(); 
                 document.getElementById('import-title').innerText = d.title; 
-            } catch(e){ document.getElementById('import-title').innerText = "Vídeo: " + cur; }
+            } catch(e){ document.getElementById('import-title').innerText = "ID: " + cur; }
         }
 
         async function confirmImport() {
@@ -241,27 +271,43 @@
         function skipImport() { indexImport++; abrirPasoImportacion(); }
         function cancelarImportacion() { queueImport = []; cerrarModal('import-modal'); loadSongs(); }
 
-        // --- GESTIÓN MAESTRO ---
+        // --- GESTIÓN MAESTRO (INCLUYE EDITAR NOMBRE DE LISTA) ---
         function toggleModoEdicion() { modoEdicion = !modoEdicion; selectedSongs = []; actualizarInterfazModo(); loadSongs(); }
         
         function actualizarInterfazModo() {
-            const btn = document.getElementById('btn-gestionar'), panel = document.getElementById('panel-maestro'), input = document.getElementById('normal-input');
+            const btn = document.getElementById('btn-gestionar'), panel = document.getElementById('panel-maestro'), inputNormal = document.getElementById('normal-input');
+            const tituloText = document.getElementById('titulo-lista-activa'), tituloInput = document.getElementById('input-edit-lista');
+
             if(modoEdicion) { 
-                btn.innerText = "Cerrar Gestión"; btn.style.background = "#fff"; btn.style.color = "#000";
-                panel.classList.remove('hidden'); input.classList.add('hidden'); 
+                btn.innerText = "Cancelar Gestión"; btn.style.background = "#fff"; btn.style.color = "#000";
+                panel.classList.remove('hidden'); inputNormal.classList.add('hidden'); 
+                tituloText.classList.add('hidden'); tituloInput.classList.remove('hidden');
             } else { 
                 btn.innerText = "Gestionar Lista"; btn.style.background = ""; btn.style.color = "";
-                panel.classList.add('hidden'); input.classList.remove('hidden'); 
+                panel.classList.add('hidden'); inputNormal.classList.remove('hidden'); 
+                tituloText.classList.remove('hidden'); tituloInput.classList.add('hidden');
             }
             document.getElementById('count-selected').innerText = `${selectedSongs.length} Seleccionadas`;
         }
 
         function toggleSelect(id) { if(!modoEdicion) return; const idx = selectedSongs.indexOf(id); if(idx > -1) selectedSongs.splice(idx, 1); else selectedSongs.push(id); loadSongs(); document.getElementById('count-selected').innerText = `${selectedSongs.length} Seleccionadas`; }
 
-        async function guardarCambiosNombres() {
+        async function guardarCambiosEdicion() {
+            // Guardar nombre de la lista
+            const nuevoNombre = document.getElementById('input-edit-lista').value.trim();
+            if(nuevoNombre && nuevoNombre !== document.getElementById('titulo-lista-activa').innerText) {
+                await client.from('mis_listas').update({ nombre: nuevoNombre }).eq('id', activeListId);
+                document.getElementById('titulo-lista-activa').innerText = nuevoNombre;
+            }
+
+            // Guardar nombres de las canciones
             const inps = document.querySelectorAll('.edit-name-input');
-            for(let i of inps) await client.from('mis_canciones').update({ titulo_personalizado: i.value }).eq('id', i.dataset.id);
+            for(let i of inps) {
+                await client.from('mis_canciones').update({ titulo_personalizado: i.value }).eq('id', i.dataset.id);
+            }
+            
             toggleModoEdicion();
+            loadLists(); // Para actualizar el botón de arriba
         }
 
         function abrirModalMover() {
@@ -302,11 +348,13 @@
 
         // --- REPRODUCTOR ---
         function playSong(i) {
-            if(modoEdicion || i < 0) return; playingIndex = i; const s = currentSongs[i];
+            if(modoEdicion || i < 0 || i >= currentSongs.length) return; 
+            playingIndex = i; const s = currentSongs[i];
             document.getElementById('player-title').innerText = s.titulo_personalizado;
             document.getElementById('player-cover').src = `https://img.youtube.com/vi/${s.content_id}/mqdefault.jpg`;
-            document.getElementById('player-bar').classList.remove('translate-y-full');
+            document.getElementById('player-bar').classList.remove('translate-y-full'); // Levanta el reproductor
             ytPlayer.loadVideoById(s.content_id); setPlayState(true); loadSongs();
+            
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({ title: s.titulo_personalizado, artwork: [{ src: `https://img.youtube.com/vi/${s.content_id}/maxresdefault.jpg`, type: 'image/jpeg' }] });
                 navigator.mediaSession.setActionHandler('previoustrack', prevSong); navigator.mediaSession.setActionHandler('nexttrack', nextSong);
