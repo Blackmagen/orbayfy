@@ -133,7 +133,7 @@
 
     <script>
         const SU_URL = 'https://pgdouwffkptdraboycnz.supabase.co';
-const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
+        const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
         const client = window.supabase.createClient(SU_URL, SU_KEY);
         
         let user = null, activeListId = null, currentSongs = [], selectedSongs = [], playingIndex = -1, ytPlayer, isPlaying = false, modoEdicion = false, queueImport = [], indexImport = 0, allLists = [];
@@ -177,21 +177,25 @@ const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
             activeListId = null; loadLists();
         }
 
-        // --- MOTOR DE IMPORTACIÓN PASO A PASO (UNIFICADO) ---
+        // --- MOTOR DE IMPORTACIÓN PASO A PASO (¡NUEVO BLOQUE FIXEADO!) ---
         async function smartAdd() {
             const input = document.getElementById('stream-input'), val = input.value.trim(); if(!val) return;
             document.getElementById('import-loader').classList.remove('hidden');
 
-            if(val.includes('list=PL')) {
+            if(val.includes('list=')) {
                 try {
                     const listId = val.split('list=')[1].split('&')[0];
-                    // Usamos un proxy fiable para leer el HTML de la lista
-                    const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent('https://www.youtube.com/playlist?list='+listId)}`);
-                    const html = await res.text();
+                    // Usamos allorigins.win, un proxy más robusto para que YouTube no lo bloquee
+                    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://www.youtube.com/playlist?list='+listId)}`);
+                    const data = await res.json();
+                    const html = data.contents;
                     
-                    // Extraer todos los IDs de vídeo
-                    const matches = [...html.matchAll(/"videoId":"([^"]{11})"/g)];
-                    queueImport = [...new Set(matches.map(m => m[1]))].slice(0, 50);
+                    // Doble rastreo para asegurar que sacamos los IDs
+                    const ids1 = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].map(m => m[1]);
+                    const ids2 = [...html.matchAll(/watch\?v=([a-zA-Z0-9_-]{11})/g)].map(m => m[1]);
+                    
+                    // Juntamos todo sin duplicados
+                    queueImport = [...new Set([...ids1, ...ids2])].filter(id => id.length === 11).slice(0, 50);
                     
                     if(queueImport.length > 0) {
                         indexImport = 0;
@@ -199,9 +203,13 @@ const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
                         document.getElementById('import-loader').classList.add('hidden');
                         abrirPasoImportacion();
                     } else {
-                        alert("No se detectaron vídeos en la lista.");
+                        alert("No se detectaron vídeos en la lista. Asegúrate de que la lista en YouTube sea PÚBLICA o NO LISTADA.");
+                        document.getElementById('import-loader').classList.add('hidden');
                     }
-                } catch(e) { alert("Error de conexión con YouTube"); }
+                } catch(e) { 
+                    alert("Error de conexión al leer la lista de YouTube."); 
+                    document.getElementById('import-loader').classList.add('hidden');
+                }
             } else {
                 const id = val.includes('v=') ? val.split('v=')[1].split('&')[0] : (val.includes('be/') ? val.split('be/')[1].split('?')[0] : val);
                 let t = "Nueva Pista";
@@ -313,4 +321,3 @@ const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
     </script>
 </body>
 </html>
-
