@@ -155,6 +155,7 @@
     </div>
 
     <div id="player-bar" class="fixed bottom-0 left-0 right-0 glass px-6 py-5 transform translate-y-full transition-all duration-700">
+        
         <button onclick="togglePlayerSize()" class="absolute -top-4 right-6 bg-zinc-900 text-zinc-500 hover:text-white border border-zinc-800 w-8 h-8 flex items-center justify-center rounded-full shadow-lg z-50 transition">
             <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
         </button>
@@ -192,8 +193,8 @@
 
     <script>
         // === SUSTITUYE AQUI CON TUS CLAVES DE SUPABASE ===
-        const SU_URL = 'https://pgdouwffkptdraboycnz.supabase.co';
-        const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
+        const SU_URL = 'ESCRIBE_AQUI_TU_URL';
+        const SU_KEY = 'ESCRIBE_AQUI_TU_KEY';
         const client = window.supabase.createClient(SU_URL, SU_KEY);
         
         let user = null, activeListId = null, currentSongs = [], allUserSongs = [], selectedSongs = [], playingIndex = -1, playingSongId = null, ytPlayer, isPlaying = false, modoEdicion = false, queueImport = [], indexImport = 0, allLists = [];
@@ -518,7 +519,7 @@
 
         function togglePlay() { isPlaying ? ytPlayer.pauseVideo() : ytPlayer.playVideo(); }
 
-        // AQUÍ VIVE LA TRAMPA DEL TIEMPO
+        // AQUÍ VIVE LA TRAMPA DEL TIEMPO PARA iOS
         function setPlayState(p) { 
             isPlaying = p; 
             document.getElementById('icon-play').classList.toggle('hidden', p); 
@@ -588,6 +589,31 @@
         
         function setVolume(v) { ytPlayer.setVolume(v); }
         function onPlayerStateChange(e) { if(e.data === YT.PlayerState.PLAYING) setPlayState(true); if(e.data === YT.PlayerState.PAUSED) setPlayState(false); if(e.data === YT.PlayerState.ENDED) nextSong(); }
+
+        // --- CONTROLES POR TECLADO ---
+        document.addEventListener('keydown', function(event) {
+            // Si el usuario está escribiendo en el buscador o añadiendo un link, no hacemos nada
+            const activeTag = document.activeElement.tagName.toLowerCase();
+            if (activeTag === 'input' || activeTag === 'textarea') return;
+
+            switch(event.code) {
+                case 'Space':
+                case 'MediaPlayPause':
+                    event.preventDefault(); // Evita que la página baje al pulsar espacio
+                    togglePlay();
+                    break;
+                case 'ArrowRight':
+                case 'MediaTrackNext':
+                    event.preventDefault();
+                    nextSong();
+                    break;
+                case 'ArrowLeft':
+                case 'MediaTrackPrevious':
+                    event.preventDefault();
+                    prevSong();
+                    break;
+            }
+        });
     </script>
 </body>
 </html>
