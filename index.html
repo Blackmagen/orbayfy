@@ -199,7 +199,7 @@
         
         let user = null, activeListId = null, currentSongs = [], allUserSongs = [], selectedSongs = [], playingIndex = -1, playingSongId = null, ytPlayer, isPlaying = false, modoEdicion = false, queueImport = [], indexImport = 0, allLists = [];
         
-        // Variables para el Hack de iOS
+        // Variables para el Hack de iOS y tiempo
         let progressTimer;
         let isPlayerMinimized = false;
         let lastTime = 0;
@@ -209,7 +209,7 @@
         let tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api";
         document.getElementsByTagName('script')[0].parentNode.insertBefore(tag, null);
         
-        // Inicializamos YouTube ocultando sus controles por si acaso
+        // Inicializamos YouTube
         function onYouTubeIframeAPIReady() { 
             ytPlayer = new YT.Player('yt-player-container', { 
                 playerVars: { controls: 0, disablekb: 1, fs: 0, rel: 0 },
@@ -284,7 +284,7 @@
             if(!el.classList.contains('hidden')) document.getElementById('stream-input').focus();
         }
 
-        // --- MOTOR DE IMPORTACIÓN PLAYLIST (SISTEMA HIDRA MULTI-SERVIDOR) ---
+        // --- MOTOR DE IMPORTACIÓN PLAYLIST ---
         async function smartAdd() {
             const input = document.getElementById('stream-input'), val = input.value.trim(); if(!val) return;
             document.getElementById('import-loader').classList.remove('hidden');
@@ -497,7 +497,6 @@
             document.getElementById('player-bar').classList.remove('translate-y-full');
             document.getElementById('mini-player').classList.add('hidden');
             
-            // Bloqueamos la detección de saltos falsos por 2 segundos mientras carga la canción
             isUserSeeking = true; 
             ytPlayer.loadVideoById(s.content_id); 
             setPlayState(true); 
@@ -519,7 +518,6 @@
 
         function togglePlay() { isPlaying ? ytPlayer.pauseVideo() : ytPlayer.playVideo(); }
 
-        // AQUÍ VIVE LA TRAMPA DEL TIEMPO PARA iOS
         function setPlayState(p) { 
             isPlaying = p; 
             document.getElementById('icon-play').classList.toggle('hidden', p); 
@@ -540,14 +538,11 @@
                         const playerDiff = currentTime - lastTime;
                         const realTimeElapsed = (now - lastTick) / 1000;
                         
-                        // HACK: Si el reproductor salta entre 6 y 20 segundos de golpe (lo que hace iOS)...
                         if (Math.abs(playerDiff) > 6 && Math.abs(playerDiff) < 20 && !isUserSeeking) {
-                            // ...Y ese salto no coincide con el tiempo de la vida real (evitamos falsos positivos)
                             if (Math.abs(playerDiff - realTimeElapsed) > 4) {
-                                console.log("¡Trampa Activada! iOS ha intentado avanzar/retroceder. Pasando canción...");
                                 if (playerDiff > 0) nextSong();
                                 else prevSong();
-                                return; // Cortamos el bucle
+                                return; 
                             }
                         }
                         
@@ -565,7 +560,7 @@
 
         function seekSong(e) {
             if(!ytPlayer || !ytPlayer.getDuration) return;
-            isUserSeeking = true; // Avisamos de que somos NOSOTROS los que avanzamos, no iOS
+            isUserSeeking = true; 
             const rect = e.currentTarget.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             const percent = Math.max(0, Math.min(1, clickX / rect.width));
@@ -573,7 +568,7 @@
             ytPlayer.seekTo(newTime, true);
             lastTime = newTime;
             lastTick = Date.now();
-            setTimeout(() => { isUserSeeking = false; }, 1000); // Volvemos a activar la trampa
+            setTimeout(() => { isUserSeeking = false; }, 1000); 
         }
 
         function nextSong() { 
@@ -590,25 +585,33 @@
         function setVolume(v) { ytPlayer.setVolume(v); }
         function onPlayerStateChange(e) { if(e.data === YT.PlayerState.PLAYING) setPlayState(true); if(e.data === YT.PlayerState.PAUSED) setPlayState(false); if(e.data === YT.PlayerState.ENDED) nextSong(); }
 
-        // --- CONTROLES POR TECLADO ---
+        // --- CONTROLES POR TECLADO EXCLUSIVOS ---
         document.addEventListener('keydown', function(event) {
-            // Si el usuario está escribiendo en el buscador o añadiendo un link, no hacemos nada
-            const activeTag = document.activeElement.tagName.toLowerCase();
+            // No hacer nada si estamos escribiendo en el buscador o añadiendo un enlace
+            const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
             if (activeTag === 'input' || activeTag === 'textarea') return;
 
             switch(event.code) {
+                // Play / Pausa
                 case 'Space':
                 case 'MediaPlayPause':
-                    event.preventDefault(); // Evita que la página baje al pulsar espacio
+                case 'F7': 
+                case 'F8': 
+                    event.preventDefault(); 
                     togglePlay();
                     break;
+                // Siguiente Canción
                 case 'ArrowRight':
                 case 'MediaTrackNext':
+                case 'F6': 
+                case 'F9': 
                     event.preventDefault();
                     nextSong();
                     break;
+                // Canción Anterior
                 case 'ArrowLeft':
                 case 'MediaTrackPrevious':
+                case 'F5': 
                     event.preventDefault();
                     prevSong();
                     break;
