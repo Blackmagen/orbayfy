@@ -12,7 +12,7 @@
         .azul-premium { background: linear-gradient(135deg, #001d3d 0%, #003566 100%); }
         .oro-premium { color: #ffc300; }
         .bg-oro { background-color: #ffc300; }
-        .glass { background: rgba(0, 29, 61, 0.98); backdrop-filter: blur(40px); z-index: 9999; }
+        .glass { background: rgba(0, 29, 61, 0.98); backdrop-filter: blur(40px); z-index: 9999; border-top: 1px solid rgba(255, 195, 0, 0.1); }
         .modal-bg { background: rgba(0, 8, 20, 0.98); backdrop-filter: blur(20px); z-index: 10000; }
         .hidden-engine { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
         
@@ -22,7 +22,7 @@
         .checkbox-custom.checked::after { content: '✓'; color: #000; font-weight: 900; }
         
         input[type=range] { -webkit-appearance: none; background: rgba(255, 255, 255, 0.1); height: 4px; border-radius: 2px; cursor: pointer; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #ffc300; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%; background: #ffc300; }
         .active-list-btn { background: #ffc300 !important; color: #000814 !important; transform: scale(1.05); font-weight: 900; border: none !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
@@ -113,35 +113,43 @@
         </div>
     </div>
 
-    <div id="player-bar" class="fixed bottom-0 left-0 right-0 glass pt-2 px-6 pb-8 transform translate-y-full transition-all duration-700">
-        <div id="progress-container" class="absolute top-0 left-0 right-0 h-1.5 bg-zinc-800 cursor-pointer" onclick="seekSong(event)">
-            <div id="progress-bar" class="h-full bg-yellow-500 w-0 relative pointer-events-none">
-                <div class="absolute -right-1.5 top-1/2 transform -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow pointer-events-none"></div>
-            </div>
-        </div>
-
-        <div class="max-w-2xl mx-auto flex items-center justify-between gap-6 mt-6">
+    <div id="player-bar" class="fixed bottom-0 left-0 right-0 glass px-6 py-5 transform translate-y-full transition-all duration-700">
+        <div class="max-w-3xl mx-auto flex items-center justify-between gap-4">
+            
             <div class="flex items-center gap-4 w-1/3 truncate text-white">
-                <img id="player-cover" src="" class="w-16 h-16 rounded-2xl object-cover shadow-2xl">
+                <img id="player-cover" src="" class="w-14 h-14 rounded-xl object-cover shadow-2xl">
                 <div class="truncate">
                     <p id="player-title" class="font-black text-sm truncate pr-4 text-white">---</p>
                     <p class="text-[9px] oro-premium font-bold uppercase tracking-widest italic">Reproduciendo</p>
                 </div>
             </div>
-            <div class="flex items-center gap-8">
-                <button onclick="prevSong()" class="text-zinc-500 hover:text-white transition"><svg width="32" height="32" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
-                <button onclick="togglePlay()" id="btn-play-pause" class="w-16 h-16 bg-oro text-black rounded-full flex items-center justify-center hover:scale-105 transition shadow-2xl shadow-yellow-500/20"><svg id="icon-play" width="36" height="36" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><svg id="icon-pause" class="hidden" width="36" height="36" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
-                <button onclick="nextSong()" class="text-zinc-500 hover:text-white transition"><svg width="32" height="32" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+
+            <div class="flex flex-col items-center gap-2 w-1/3">
+                <div class="flex items-center gap-6">
+                    <button onclick="prevSong()" class="text-zinc-500 hover:text-white transition"><svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+                    <button onclick="togglePlay()" id="btn-play-pause" class="w-12 h-12 bg-oro text-black rounded-full flex items-center justify-center hover:scale-105 transition shadow-lg shadow-yellow-500/20"><svg id="icon-play" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><svg id="icon-pause" class="hidden" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
+                    <button onclick="nextSong()" class="text-zinc-500 hover:text-white transition"><svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+                </div>
+                <div id="progress-container" class="w-full max-w-[180px] h-1.5 bg-zinc-800 rounded-full cursor-pointer relative flex items-center group" onclick="seekSong(event)">
+                    <div id="progress-bar" class="h-full bg-yellow-500 w-0 rounded-full pointer-events-none relative transition-all duration-300 ease-linear">
+                        <div class="absolute -right-1.5 top-1/2 transform -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                    </div>
+                </div>
             </div>
-            <div class="hidden sm:flex items-center gap-3 w-1/3 justify-end"><input type="range" id="volume-bar" value="100" min="0" max="100" class="w-20" oninput="setVolume(this.value)"></div>
+
+            <div class="hidden sm:flex items-center gap-3 w-1/3 justify-end text-zinc-500">
+                <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                <input type="range" id="volume-bar" value="100" min="0" max="100" class="w-20" oninput="setVolume(this.value)">
+            </div>
         </div>
     </div>
 
     <div id="yt-player-container" class="hidden-engine"></div>
 
     <script>
+        // === SUPABASE ===
         const SU_URL = 'https://pgdouwffkptdraboycnz.supabase.co';
-        const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
+const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZG91d2Zma3B0ZHJhYm95Y256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTAzNDcsImV4cCI6MjA5MDc4NjM0N30.4JHV3362oz4XhyFgonX_8chavpWShmJFGTeE6feRpCo';
         const client = window.supabase.createClient(SU_URL, SU_KEY);
         
         let user = null, activeListId = null, currentSongs = [], selectedSongs = [], playingIndex = -1, ytPlayer, isPlaying = false, modoEdicion = false, queueImport = [], indexImport = 0, allLists = [];
@@ -211,7 +219,7 @@
             loadLists(); 
         }
 
-        // --- MOTOR DE IMPORTACIÓN PLAYLIST (DOBLE PUENTE) ---
+        // --- MOTOR DE IMPORTACIÓN PLAYLIST (EL MÉTODO HACKER PURO - SIN PROXYS) ---
         async function smartAdd() {
             const input = document.getElementById('stream-input'), val = input.value.trim(); if(!val) return;
             document.getElementById('import-loader').classList.remove('hidden');
@@ -219,39 +227,40 @@
             if(val.includes('list=')) {
                 try {
                     const listId = val.split('list=')[1].split('&')[0];
-                    let html = '';
-                    
-                    // Intento 1: API AllOrigins (Formato JSON para evitar bloqueos puros)
+                    let ids = [];
+
+                    // INTENTO 1: Usando la API de Invidious/Piped (No es un proxy, es una API pura indetectable por Adblocks)
                     try {
-                        const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://www.youtube.com/playlist?list='+listId)}`);
-                        const data = await res.json();
-                        html = data.contents || '';
-                    } catch(e) { console.log('Fallo puente 1'); }
+                        const res = await fetch(`https://pipedapi.kavin.rocks/playlists/${listId}`);
+                        if(res.ok) {
+                            const data = await res.json();
+                            if(data.relatedStreams) ids = data.relatedStreams.map(v => v.url.split('?v=')[1]);
+                        }
+                    } catch(e) { console.log('API Piped bloqueada, cambiando a Lemnos...'); }
 
-                    // Intento 2: CodeTabs si el primero falla o no devuelve datos útiles
-                    if(!html || !html.includes('videoId')) {
+                    // INTENTO 2: Usando la API espejo de LemnosLife (Acceso directo libre a datos de YouTube)
+                    if(ids.length === 0) {
                         try {
-                            const res2 = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent('https://www.youtube.com/playlist?list='+listId)}`);
-                            html = await res2.text();
-                        } catch(e) { console.log('Fallo puente 2'); }
+                            const res2 = await fetch(`https://yt.lemnoslife.com/playlistItems?part=snippet&maxResults=50&playlistId=${listId}`);
+                            if(res2.ok) {
+                                const data2 = await res2.json();
+                                if(data2.items) ids = data2.items.map(item => item.snippet.resourceId.videoId);
+                            }
+                        } catch(e) { console.log('API Lemnos falló'); }
                     }
-
-                    // Extraer IDs con 2 reglas distintas para blindar el sistema
-                    const ids1 = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].map(m => m[1]);
-                    const ids2 = [...html.matchAll(/watch\?v=([a-zA-Z0-9_-]{11})/g)].map(m => m[1]);
                     
-                    queueImport = [...new Set([...ids1, ...ids2])].filter(id => id.length === 11).slice(0, 50);
+                    queueImport = [...new Set(ids)].filter(id => id && id.length === 11).slice(0, 50);
                     
                     if(queueImport.length > 0) {
                         indexImport = 0; input.value = ""; 
                         document.getElementById('import-loader').classList.add('hidden');
                         abrirPasoImportacion();
                     } else {
-                        alert("No se pudo leer la lista. Puede que YouTube la esté bloqueando temporalmente o sea privada.");
+                        alert("No se pudo leer la lista. Asegúrate de que la Playlist en YouTube está como Pública o No Listada.");
                         document.getElementById('import-loader').classList.add('hidden');
                     }
                 } catch(e) { 
-                    alert("Error leyendo YouTube."); 
+                    alert("Error procesando el enlace."); 
                     document.getElementById('import-loader').classList.add('hidden');
                 }
             } else {
@@ -355,7 +364,7 @@
             }).join('');
         }
 
-        // --- REPRODUCTOR Y BARRA DE PROGRESO ---
+        // --- REPRODUCTOR Y BARRA MINIMALISTA ---
         function playSong(i) {
             if(modoEdicion || i < 0 || i >= currentSongs.length) return; 
             playingIndex = i; const s = currentSongs[i];
@@ -378,7 +387,6 @@
             document.getElementById('icon-pause').classList.toggle('hidden', !p); 
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = p ? "playing" : "paused"; 
             
-            // Actualizar la barra de tiempo
             if(p) {
                 progressTimer = setInterval(() => {
                     if(ytPlayer && ytPlayer.getCurrentTime && ytPlayer.getDuration) {
@@ -393,9 +401,9 @@
 
         function seekSong(e) {
             if(!ytPlayer || !ytPlayer.getDuration) return;
-            const rect = document.getElementById('progress-container').getBoundingClientRect();
+            const rect = e.currentTarget.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
-            const percent = clickX / rect.width;
+            const percent = Math.max(0, Math.min(1, clickX / rect.width));
             ytPlayer.seekTo(ytPlayer.getDuration() * percent, true);
         }
 
